@@ -54,6 +54,7 @@ cat > auto/config << 'AUTOCONFIG'
 #!/bin/sh
 set -e
 lb config noauto \
+  --mode debian \
   --system live \
   --distribution bookworm \
   --debian-installer none \
