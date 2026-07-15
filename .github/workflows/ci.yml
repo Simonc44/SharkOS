@@ -234,6 +234,7 @@ jobs:
           done
 
       - name: Vérifier les commandes critiques référencées dans les hooks
+        shell: bash
         run: |
           echo "🦈 Vérification des commandes systèmes référencées..."
           COMMANDS_TO_CHECK=(
