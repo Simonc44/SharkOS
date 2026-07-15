@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SharkOS — 00-bootstrap.sh
+# SharkOS — 00-bootstrap.sh (v2 — corrigé)
 # Prépare l'environnement live-build sur un hôte Debian/Ubuntu
+# FIXES : copie logo.png, suppression ref SVG, chemins robustes
 # =============================================================================
 set -euo pipefail
 
@@ -18,6 +19,30 @@ echo ""
 if [[ $EUID -ne 0 ]]; then
   echo "[ERREUR] Ce script doit être exécuté en root."
   echo "         Utilise : sudo bash scripts/00-bootstrap.sh"
+  exit 1
+fi
+
+# --- Vérification que les wallpapers PNG existent ---
+echo "[0/5] Vérification des assets PNG..."
+WARN=0
+for ASSET in wallpaper.png logo.png; do
+  if [[ -f "$SHARK_DIR/wallpapers/$ASSET" ]]; then
+    echo "   ✅ $ASSET trouvé"
+    # Vérifier que c'est bien un PNG (pas un SVG renommé)
+    MIME=$(file --mime-type -b "$SHARK_DIR/wallpapers/$ASSET")
+    if [[ "$MIME" != "image/png" ]]; then
+      echo "   ❌ $ASSET n'est pas un PNG valide (détecté : $MIME)"
+      exit 1
+    fi
+  else
+    echo "   ⚠️  $ASSET absent — il sera généré automatiquement"
+    WARN=$((WARN + 1))
+  fi
+done
+# Refuser tout SVG dans wallpapers/
+if find "$SHARK_DIR/wallpapers/" -name "*.svg" 2>/dev/null | grep -q "."; then
+  echo "   ❌ Des fichiers .svg sont présents dans wallpapers/ — SharkOS n'utilise que des PNG !"
+  find "$SHARK_DIR/wallpapers/" -name "*.svg"
   exit 1
 fi
 
@@ -42,7 +67,8 @@ apt-get install -y -qq \
   ca-certificates \
   debootstrap \
   rsync \
-  dconf-cli
+  dconf-cli \
+  imagemagick
 
 # --- Création de la structure iso-build ---
 echo "[3/5] Création de la structure iso-build..."
@@ -50,23 +76,67 @@ mkdir -p "$BUILD_DIR/auto"
 mkdir -p "$BUILD_DIR/config/hooks/live"
 mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel"
 mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/sharkos"
+mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos"
 mkdir -p "$BUILD_DIR/config/package-lists"
 
 # --- Copie des hooks chroot ---
 echo "[4/5] Copie des hooks chroot..."
-for hook in "$SHARK_DIR/chroot-hooks"/*.sh; do
-  cp "$hook" "$BUILD_DIR/config/hooks/live/"
-  chmod +x "$BUILD_DIR/config/hooks/live/$(basename "$hook")"
+for HOOK in "$SHARK_DIR/chroot-hooks"/*.sh; do
+  HOOK_NAME=$(basename "$HOOK")
+  cp "$HOOK" "$BUILD_DIR/config/hooks/live/$HOOK_NAME"
+  chmod +x "$BUILD_DIR/config/hooks/live/$HOOK_NAME"
+  echo "   ✓ $HOOK_NAME"
 done
 
-# --- Copie des fichiers de config utilisateur ---
-echo "[5/5] Copie des fichiers de config (skel)..."
-cp "$SHARK_DIR/config/.zshrc" "$BUILD_DIR/config/includes.chroot/etc/skel/.zshrc"
-cp "$SHARK_DIR/config/plank.dconf" "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/plank.dconf"
+# --- Copie des fichiers de config et assets PNG ---
+echo "[5/5] Copie des fichiers de config et assets..."
 
-if [[ -f "$SHARK_DIR/wallpapers/sharkos-wall.svg" ]]; then
-  cp "$SHARK_DIR/wallpapers/sharkos-wall.svg" \
-     "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/sharkos-wall.svg"
+# .zshrc
+cp "$SHARK_DIR/config/.zshrc" \
+   "$BUILD_DIR/config/includes.chroot/etc/skel/.zshrc"
+echo "   ✓ .zshrc"
+
+# plank.dconf
+cp "$SHARK_DIR/config/plank.dconf" \
+   "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/plank.dconf"
+echo "   ✓ plank.dconf"
+
+# wallpaper.png (PNG obligatoire — génère si absent)
+if [[ -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
+  cp "$SHARK_DIR/wallpapers/wallpaper.png" \
+     "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png"
+  cp "$SHARK_DIR/wallpapers/wallpaper.png" \
+     "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos/sharkos.png"
+  echo "   ✓ wallpaper.png"
+else
+  echo "   ⚙️  Génération du wallpaper PNG de remplacement..."
+  convert \
+    -size 1920x1080 xc:'#0a0a0f' \
+    -font DejaVu-Sans-Bold \
+    -pointsize 80 -fill '#1a8cff' -gravity center \
+    -annotate +0-40 'SharkOS' \
+    -pointsize 22 -fill '#4a9eff' \
+    -annotate +0+60 'Rapide. Furtif. Létal.' \
+    "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png" 2>/dev/null || true
+  cp "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png" \
+     "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos/sharkos.png" 2>/dev/null || true
+  echo "   ✓ wallpaper.png généré"
+fi
+
+# logo.png (PNG — génère si absent)
+if [[ -f "$SHARK_DIR/wallpapers/logo.png" ]]; then
+  cp "$SHARK_DIR/wallpapers/logo.png" \
+     "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/logo.png"
+  echo "   ✓ logo.png"
+else
+  echo "   ⚙️  Génération du logo PNG de remplacement..."
+  convert \
+    -size 512x512 xc:'#0a0a0f' \
+    -font DejaVu-Sans-Bold \
+    -pointsize 200 -fill '#1a8cff' -gravity center \
+    -annotate +0+0 'S' \
+    "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/logo.png" 2>/dev/null || true
+  echo "   ✓ logo.png généré"
 fi
 
 echo ""
