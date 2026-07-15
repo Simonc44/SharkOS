@@ -64,7 +64,6 @@ lb config noauto \
   --iso-preparer "SharkOS Build System v2.0" \
   --iso-publisher "SharkOS Project — Rapide. Furtif. Létal." \
   --iso-volume "SHARKOS" \
-  --image-name "SharkOS" \
   --binary-images iso-hybrid \
   --memtest none \
   --firmware-binary false \
