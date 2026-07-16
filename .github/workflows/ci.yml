@@ -31,7 +31,7 @@ jobs:
   # JOB 1 — LINT & SYNTAXE SHELL
   # =========================================================================
   lint-shell:
-    name: \"🔍 Lint Shell (ShellCheck)\"
+    name: "🔍 Lint Shell (ShellCheck)"
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -43,29 +43,29 @@ jobs:
       - name: ShellCheck — scripts/
         shell: bash
         run: |
-          echo \"🦈 Vérification syntaxe : scripts/\"
-          shellcheck --severity=warning \\
-            scripts/00-bootstrap.sh \\
-            scripts/01-build-iso.sh \\
+          echo "🦈 Vérification syntaxe : scripts/"
+          shellcheck --severity=warning \
+            scripts/00-bootstrap.sh \
+            scripts/01-build-iso.sh \
             scripts/02-flash-usb.sh
-          echo \"✅ scripts/ OK\"
+          echo "✅ scripts/ OK"
 
       - name: ShellCheck — chroot-hooks/
         shell: bash
         run: |
-          echo \"🦈 Vérification syntaxe : chroot-hooks/\"
-          shellcheck --severity=warning \\
-            chroot-hooks/10-install-tools.sh \\
-            chroot-hooks/20-apply-theme.sh \\
-            chroot-hooks/30-configure-shell.sh \\
+          echo "🦈 Vérification syntaxe : chroot-hooks/"
+          shellcheck --severity=warning \
+            chroot-hooks/10-install-tools.sh \
+            chroot-hooks/20-apply-theme.sh \
+            chroot-hooks/30-configure-shell.sh \
             chroot-hooks/40-cleanup.sh
-          echo \"✅ chroot-hooks/ OK\"
+          echo "✅ chroot-hooks/ OK"
 
   # =========================================================================
   # JOB 2 — VÉRIFICATION DE STRUCTURE DU PROJET
   # =========================================================================
   check-structure:
-    name: \"📁 Structure du projet\"
+    name: "📁 Structure du projet"
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -74,123 +74,123 @@ jobs:
       - name: Vérifier tous les fichiers obligatoires
         shell: bash
         run: |
-          echo \"🦈 Vérification de la structure SharkOS...\"
+          echo "🦈 Vérification de la structure SharkOS..."
           MISSING=0
 
           check_file() {
-            if [[ ! -f \"$1\" ]]; then
-              echo \"  ❌ MANQUANT : $1\"
+            if [[ ! -f "$1" ]]; then
+              echo "  ❌ MANQUANT : $1"
               MISSING=$((MISSING + 1))
             else
-              echo \"  ✅ OK : $1\"
+              echo "  ✅ OK : $1"
             fi
           }
 
           check_dir() {
-            if [[ ! -d \"$1\" ]]; then
-              echo \"  ❌ DOSSIER MANQUANT : $1\"
+            if [[ ! -d "$1" ]]; then
+              echo "  ❌ DOSSIER MANQUANT : $1"
               MISSING=$((MISSING + 1))
             else
-              echo \"  ✅ OK (dossier) : $1\"
+              echo "  ✅ OK (dossier) : $1"
             fi
           }
 
-          echo \"\"
-          echo \"--- Scripts ---\"
-          check_file \"scripts/00-bootstrap.sh\"
-          check_file \"scripts/01-build-iso.sh\"
-          check_file \"scripts/02-flash-usb.sh\"
+          echo ""
+          echo "--- Scripts ---"
+          check_file "scripts/00-bootstrap.sh"
+          check_file "scripts/01-build-iso.sh"
+          check_file "scripts/02-flash-usb.sh"
 
-          echo \"\"
-          echo \"--- Hooks chroot ---\"
-          check_file \"chroot-hooks/10-install-tools.sh\"
-          check_file \"chroot-hooks/20-apply-theme.sh\"
-          check_file \"chroot-hooks/30-configure-shell.sh\"
-          check_file \"chroot-hooks/40-cleanup.sh\"
+          echo ""
+          echo "--- Hooks chroot ---"
+          check_file "chroot-hooks/10-install-tools.sh"
+          check_file "chroot-hooks/20-apply-theme.sh"
+          check_file "chroot-hooks/30-configure-shell.sh"
+          check_file "chroot-hooks/40-cleanup.sh"
 
-          echo \"\"
-          echo \"--- Config ---\"
-          check_file \"config/.zshrc\"
-          check_file \"config/plank.dconf\"
-          check_file \"config/xfce4-panel.xml\"
+          echo ""
+          echo "--- Config ---"
+          check_file "config/.zshrc"
+          check_file "config/plank.dconf"
+          check_file "config/xfce4-panel.xml"
 
-          echo \"\"
-          echo \"--- Documentation ---\"
-          check_file \"README.md\"
-          check_file \"INSTRUCTIONS.md\"
+          echo ""
+          echo "--- Documentation ---"
+          check_file "README.md"
+          check_file "INSTRUCTIONS.md"
 
-          echo \"\"
-          echo \"--- Dossiers ---\"
-          check_dir \"wallpapers\"
-          check_dir \".github/workflows\"
+          echo ""
+          echo "--- Dossiers ---"
+          check_dir "wallpapers"
+          check_dir ".github/workflows"
 
-          echo \"\"
+          echo ""
           if [[ $MISSING -gt 0 ]]; then
-            echo \"❌ $MISSING fichier(s) manquant(s) !\"
+            echo "❌ $MISSING fichier(s) manquant(s) !"
             exit 1
           else
-            echo \"✅ Structure complète — tous les fichiers sont présents.\"
+            echo "✅ Structure complète — tous les fichiers sont présents."
           fi
 
       - name: Vérifier aucun SVG dans wallpapers/
         shell: bash
         run: |
-          if find wallpapers/ -name \"*.svg\" 2>/dev/null | grep -q \".\"; then
-            echo \"❌ Fichiers .svg trouvés dans wallpapers/ — PNG uniquement !\"
+          if find wallpapers/ -name "*.svg" 2>/dev/null | grep -q "."; then
+            echo "❌ Fichiers .svg trouvés dans wallpapers/ — PNG uniquement !"
             exit 1
           else
-            echo \"✅ Aucun SVG dans wallpapers/ — OK\"
+            echo "✅ Aucun SVG dans wallpapers/ — OK"
           fi
 
       - name: Vérifier le shebang des hooks
         shell: bash
         run: |
           for HOOK in chroot-hooks/*.sh; do
-            FIRST=$(head -1 \"$HOOK\")
-            if [[ \"$FIRST\" != \"#!/usr/bin/env bash\" ]]; then
-              echo \"❌ $HOOK — shebang incorrect : $FIRST\"
+            FIRST=$(head -1 "$HOOK")
+            if [[ "$FIRST" != "#!/usr/bin/env bash" ]]; then
+              echo "❌ $HOOK — shebang incorrect : $FIRST"
               exit 1
             else
-              echo \"✅ $HOOK\"
+              echo "✅ $HOOK"
             fi
           done
 
       - name: Vérifier la cohérence du .zshrc
         shell: bash
         run: |
-          ZSHRC=\"config/.zshrc\"
+          ZSHRC="config/.zshrc"
           FAIL=0
 
           check_zshrc() {
-            if grep -q \"$1\" \"$ZSHRC\"; then
-              echo \"  ✅ $1\"
+            if grep -q "$1" "$ZSHRC"; then
+              echo "  ✅ $1"
             else
-              echo \"  ❌ ABSENT : $1\"
+              echo "  ❌ ABSENT : $1"
               FAIL=$((FAIL + 1))
             fi
           }
 
-          check_zshrc \"update-system\"
-          check_zshrc \"ZSH_THEME=\"
-          check_zshrc \"SharkOS\"
-          check_zshrc \"alias dir=\"
-          check_zshrc \"alias cls=\"
-          check_zshrc \"alias ipconfig=\"
-          check_zshrc \"alias sharkscan=\"
-          check_zshrc \"alias sharkfw=\"
-          check_zshrc \"alias sharkav=\"
+          check_zshrc "update-system"
+          check_zshrc "ZSH_THEME="
+          check_zshrc "SharkOS"
+          check_zshrc "alias dir="
+          check_zshrc "alias cls="
+          check_zshrc "alias ipconfig="
+          check_zshrc "alias sharkscan="
+          check_zshrc "alias sharkfw="
+          check_zshrc "alias sharkav="
 
           if [[ $FAIL -gt 0 ]]; then
-            echo \"❌ $FAIL élément(s) manquant(s) dans le .zshrc !\"
+            echo "❌ $FAIL élément(s) manquant(s) dans le .zshrc !"
             exit 1
           fi
-          echo \"✅ .zshrc complet\"
+          echo "✅ .zshrc complet"
 
   # =========================================================================
   # JOB 3 — SIMULATION CHROOT (container Debian Bookworm natif)
   # =========================================================================
   test-hooks-debian:
-    name: \"🐧 Test hooks dans Debian Bookworm\"
+    name: "🐧 Test hooks dans Debian Bookworm"
     runs-on: ubuntu-22.04
     container:
       image: debian:bookworm-slim
@@ -201,41 +201,41 @@ jobs:
       - name: Installer les dépendances minimales
         run: |
           apt-get update -qq
-          apt-get install -y --no-install-recommends \\
+          apt-get install -y --no-install-recommends \
             bash shellcheck git curl wget ca-certificates lsb-release
 
       - name: Dry-run tous les hooks (bash -n)
         shell: bash
         run: |
           for HOOK in chroot-hooks/*.sh; do
-            bash -n \"$HOOK\" && echo \"✅ $HOOK — syntaxe OK\"
+            bash -n "$HOOK" && echo "✅ $HOOK — syntaxe OK"
           done
 
       - name: Dry-run tous les scripts (bash -n)
         shell: bash
         run: |
           for SCRIPT in scripts/*.sh; do
-            bash -n \"$SCRIPT\" && echo \"✅ $SCRIPT — syntaxe OK\"
+            bash -n "$SCRIPT" && echo "✅ $SCRIPT — syntaxe OK"
           done
 
       - name: Vérifier les commandes critiques
         shell: bash
         run: |
           check_cmd() {
-            command -v \"$1\" &>/dev/null \\
-              && echo \"  ✅ $1\" \\
-              || echo \"  ⚠️  $1 absent (normal en CI slim)\"
+            command -v "$1" &>/dev/null \
+              && echo "  ✅ $1" \
+              || echo "  ⚠️  $1 absent (normal en CI slim)"
           }
           check_cmd bash; check_cmd git; check_cmd curl
           check_cmd apt-get; check_cmd dpkg; check_cmd chmod
           check_cmd find; check_cmd grep; check_cmd awk
-          echo \"✅ Vérification commandes terminée\"
+          echo "✅ Vérification commandes terminée"
 
   # =========================================================================
   # JOB 4 — VÉRIFICATION XML/CONFIG XFCE
   # =========================================================================
   check-configs:
-    name: \"⚙️ Validation configs XML & paquets\"
+    name: "⚙️ Validation configs XML & paquets"
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -247,48 +247,48 @@ jobs:
       - name: Valider xfce4-panel.xml
         shell: bash
         run: |
-          xmllint --noout config/xfce4-panel.xml && echo \"✅ xfce4-panel.xml valide\"
+          xmllint --noout config/xfce4-panel.xml && echo "✅ xfce4-panel.xml valide"
 
       - name: Vérifier plank.dconf
         shell: bash
         run: |
-          grep -q \"Position=3\" config/plank.dconf \\
-            && echo \"✅ Plank positionné en bas\" \\
-            || echo \"⚠️  Position Plank non détectée\"
-          grep -qiE \"zoom\" config/plank.dconf \\
-            && echo \"✅ Zoom Plank OK\" || true
+          grep -q "Position=3" config/plank.dconf \
+            && echo "✅ Plank positionné en bas" \
+            || echo "⚠️  Position Plank non détectée"
+          grep -qiE "zoom" config/plank.dconf \
+            && echo "✅ Zoom Plank OK" || true
 
       - name: Vérifier les paquets clés + miroirs dans 01-build-iso.sh
         shell: bash
         run: |
-          SCRIPT=\"scripts/01-build-iso.sh\"
+          SCRIPT="scripts/01-build-iso.sh"
           FAIL=0
 
           check_pkg() {
-            grep -q \"$1\" \"$SCRIPT\" \\
-              && echo \"  ✅ $1\" \\
-              || { echo \"  ❌ $1 manquant !\"; FAIL=$((FAIL + 1)); }
+            grep -q "$1" "$SCRIPT" \
+              && echo "  ✅ $1" \
+              || { echo "  ❌ $1 manquant !"; FAIL=$((FAIL + 1)); }
           }
 
-          check_pkg \"xfce4\";       check_pkg \"plank\"
-          check_pkg \"zsh\";         check_pkg \"nmap\"
-          check_pkg \"wireshark\";   check_pkg \"ufw\"
-          check_pkg \"clamav\";      check_pkg \"snapd\"
-          check_pkg \"flatpak\";     check_pkg \"macchanger\"
-          check_pkg \"wine\";        check_pkg \"firefox-esr\"
-          check_pkg \"deb.debian.org\"
+          check_pkg "xfce4";       check_pkg "plank"
+          check_pkg "zsh";         check_pkg "nmap"
+          check_pkg "wireshark";   check_pkg "ufw"
+          check_pkg "clamav";      check_pkg "snapd"
+          check_pkg "flatpak";     check_pkg "macchanger"
+          check_pkg "wine";        check_pkg "firefox-esr"
+          check_pkg "deb.debian.org"
 
           if [[ $FAIL -gt 0 ]]; then
-            echo \"❌ $FAIL élément(s) manquant(s) !\"
+            echo "❌ $FAIL élément(s) manquant(s) !"
             exit 1
           fi
-          echo \"✅ Paquets + miroirs OK\"
+          echo "✅ Paquets + miroirs OK"
 
   # =========================================================================
   # JOB 5 — RAPPORT FINAL
   # =========================================================================
   summary:
-    name: \"📊 Rapport CI SharkOS\"
+    name: "📊 Rapport CI SharkOS"
     runs-on: ubuntu-22.04
     needs: [lint-shell, check-structure, test-hooks-debian, check-configs]
     if: always()
@@ -299,37 +299,37 @@ jobs:
       - name: Générer le rapport
         shell: bash
         run: |
-          echo \"\"
-          echo \"🦈 ========================================================\"
-          echo \"   SharkOS CI — Rapport final\"
-          echo \"======================================================== 🦈\"
-          echo \"  Commit      : ${{ github.sha }}\"
-          echo \"  Branche     : ${{ github.ref_name }}\"
-          echo \"  Déclencheur : ${{ github.event_name }}\"
-          echo \"  Date        : $(date '+%Y-%m-%d %H:%M:%S UTC')\"
-          echo \"\"
-          echo \"  📁 Scripts      : $(find scripts/ -name '*.sh' | wc -l)\"
-          echo \"  🪝 Hooks chroot : $(find chroot-hooks/ -name '*.sh' | wc -l)\"
-          echo \"  ⚙️  Configs      : $(find config/ -type f | wc -l)\"
-          echo \"  📝 Lignes shell : $(find . -name '*.sh' -not -path './.git/*' -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}')\"
-          echo \"\"
-          echo \"  Jobs :\"
-          echo \"    🔍 Lint Shell   : ${{ needs.lint-shell.result }}\"
-          echo \"    📁 Structure    : ${{ needs.check-structure.result }}\"
-          echo \"    🐧 Test Debian  : ${{ needs.test-hooks-debian.result }}\"
-          echo \"    ⚙️  Configs XML  : ${{ needs.check-configs.result }}\"
-          echo \"\"
+          echo ""
+          echo "🦈 ========================================================"
+          echo "   SharkOS CI — Rapport final"
+          echo "======================================================== 🦈"
+          echo "  Commit      : ${{ github.sha }}"
+          echo "  Branche     : ${{ github.ref_name }}"
+          echo "  Déclencheur : ${{ github.event_name }}"
+          echo "  Date        : $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "  📁 Scripts      : $(find scripts/ -name '*.sh' | wc -l)"
+          echo "  🪝 Hooks chroot : $(find chroot-hooks/ -name '*.sh' | wc -l)"
+          echo "  ⚙️  Configs      : $(find config/ -type f | wc -l)"
+          echo "  📝 Lignes shell : $(find . -name '*.sh' -not -path './.git/*' -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}')"
+          echo ""
+          echo "  Jobs :"
+          echo "    🔍 Lint Shell   : ${{ needs.lint-shell.result }}"
+          echo "    📁 Structure    : ${{ needs.check-structure.result }}"
+          echo "    🐧 Test Debian  : ${{ needs.test-hooks-debian.result }}"
+          echo "    ⚙️  Configs XML  : ${{ needs.check-configs.result }}"
+          echo ""
 
-          if [[ \"${{ needs.lint-shell.result }}\"        == \"success\" ]] && \\
-             [[ \"${{ needs.check-structure.result }}\"   == \"success\" ]] && \\
-             [[ \"${{ needs.test-hooks-debian.result }}\" == \"success\" ]] && \\
-             [[ \"${{ needs.check-configs.result }}\"     == \"success\" ]]; then
-            echo \"  🦈 RÉSULTAT : ✅ TOUT EST OK — SharkOS est prêt à builder !\"
+          if [[ "${{ needs.lint-shell.result }}"        == "success" ]] && \
+             [[ "${{ needs.check-structure.result }}"   == "success" ]] && \
+             [[ "${{ needs.test-hooks-debian.result }}" == "success" ]] && \
+             [[ "${{ needs.check-configs.result }}"     == "success" ]]; then
+            echo "  🦈 RÉSULTAT : ✅ TOUT EST OK — SharkOS est prêt à builder !"
           else
-            echo \"  🦈 RÉSULTAT : ❌ Des erreurs détectées — voir les jobs ci-dessus.\"
+            echo "  🦈 RÉSULTAT : ❌ Des erreurs détectées — voir les jobs ci-dessus."
             exit 1
           fi
-          echo \"======================================================== 🦈\"
+          echo "======================================================== 🦈"
 
   # =========================================================================
   # JOB 6 — BUILD ISO COMPLÈTE (MANUEL uniquement)
@@ -340,7 +340,7 @@ jobs:
   # Le répertoire de travail est monté en volume dans le container.
   # =========================================================================
   full-iso-build:
-    name: \"🏗️ Build ISO complète (manuel)\"
+    name: "🏗️ Build ISO complète (manuel)"
     runs-on: ubuntu-22.04
     needs: [lint-shell, check-structure, test-hooks-debian, check-configs]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.full_build == 'true'
@@ -353,19 +353,19 @@ jobs:
         run: |
           sudo apt-get install -y imagemagick -qq
           mkdir -p wallpapers
-          convert -size 1920x1080 xc:'#0a0a0f' \\
-            -font DejaVu-Sans-Bold -pointsize 80 \\
-            -fill '#1a8cff' -gravity center \\
-            -annotate +0-40 'SharkOS' \\
-            -pointsize 20 -fill '#ffffff' \\
-            -annotate +0+60 'Rapide. Furtif. Letal.' \\
+          convert -size 1920x1080 xc:'#0a0a0f' \
+            -font DejaVu-Sans-Bold -pointsize 80 \
+            -fill '#1a8cff' -gravity center \
+            -annotate +0-40 'SharkOS' \
+            -pointsize 20 -fill '#ffffff' \
+            -annotate +0+60 'Rapide. Furtif. Letal.' \
             wallpapers/wallpaper.png
-          convert -size 512x512 xc:'#0a0a0f' \\
-            -font DejaVu-Sans-Bold -pointsize 200 \\
-            -fill '#1a8cff' -gravity center \\
-            -annotate +0+0 'S' \\
+          convert -size 512x512 xc:'#0a0a0f' \
+            -font DejaVu-Sans-Bold -pointsize 200 \
+            -fill '#1a8cff' -gravity center \
+            -annotate +0+0 'S' \
             wallpapers/logo.png
-          echo \"✅ Wallpapers PNG créés\"
+          echo "✅ Wallpapers PNG créés"
 
       - name: Build ISO dans un container Debian Bookworm natif
         # FIX DÉFINITIF : on exécute TOUTE la build à l'intérieur d'un
@@ -373,38 +373,38 @@ jobs:
         # live-build est installé depuis les dépôts Debian officiels natifs.
         shell: bash
         run: |
-          WORKDIR=\"$(pwd)\"
+          WORKDIR="$(pwd)"
 
-          docker run --rm \\
-            --privileged \\
-            -v \"${WORKDIR}:/build\" \\
-            -w /build \\
-            debian:bookworm \\
+          docker run --rm \
+            --privileged \
+            -v "${WORKDIR}:/build" \
+            -w /build \
+            debian:bookworm \
             bash -c '
               set -euo pipefail
 
-              echo \"🦈 Environnement Debian Bookworm natif\"
-              echo \"  OS : $(lsb_release -ds 2>/dev/null || cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2)\"
+              echo "🦈 Environnement Debian Bookworm natif"
+              echo "  OS : $(lsb_release -ds 2>/dev/null || cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2)"
 
               # Mise à jour + dépendances (tout depuis Debian officiel)
               apt-get update -qq
-              apt-get install -y --no-install-recommends \\
-                live-build \\
-                debootstrap \\
-                squashfs-tools \\
-                xorriso \\
-                isolinux \\
-                syslinux-utils \\
-                syslinux-common \\
-                genisoimage \\
-                imagemagick \\
-                git curl wget \\
-                ca-certificates \\
-                rsync dconf-cli \\
+              apt-get install -y --no-install-recommends \
+                live-build \
+                debootstrap \
+                squashfs-tools \
+                xorriso \
+                isolinux \
+                syslinux-utils \
+                syslinux-common \
+                genisoimage \
+                imagemagick \
+                git curl wget \
+                ca-certificates \
+                rsync dconf-cli \
                 lsb-release
 
-              echo \"✅ live-build : $(live-build --version)\"
-              echo \"✅ debootstrap : $(debootstrap --version | head -1)\"
+              echo "✅ live-build : $(live-build --version)"
+              echo "✅ debootstrap : $(debootstrap --version | head -1)"
 
               # Bootstrap
               bash scripts/00-bootstrap.sh
@@ -416,14 +416,14 @@ jobs:
       - name: Vérifier et afficher l'ISO générée
         shell: bash
         run: |
-          if [[ -f \"SharkOS.iso\" ]]; then
+          if [[ -f "SharkOS.iso" ]]; then
             SIZE=$(du -sh SharkOS.iso | cut -f1)
-            echo \"✅ SharkOS.iso générée : $SIZE\"
+            echo "✅ SharkOS.iso générée : $SIZE"
             sudo apt-get install -y -qq genisoimage 2>/dev/null || true
-            isoinfo -d -i SharkOS.iso 2>/dev/null \\
-              | grep -E \"(Volume id|System id|Logical block)\" || true
+            isoinfo -d -i SharkOS.iso 2>/dev/null \
+              | grep -E "(Volume id|System id|Logical block)" || true
           else
-            echo \"❌ SharkOS.iso introuvable\"
+            echo "❌ SharkOS.iso introuvable"
             exit 1
           fi
 
@@ -439,11 +439,11 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [[ -f \"SharkOS.iso\" ]]; then
+          if [[ -f "SharkOS.iso" ]]; then
             SIZE=$(du -sh SharkOS.iso | cut -f1)
-            echo \"🦈 ✅ Build réussie — SharkOS.iso ($SIZE)\"
-            echo \"   Télécharge l'ISO depuis l'onglet Artifacts de ce workflow.\"
+            echo "🦈 ✅ Build réussie — SharkOS.iso ($SIZE)"
+            echo "   Télécharge l'ISO depuis l'onglet Artifacts de ce workflow."
           else
-            echo \"🦈 ❌ Build échouée — consulte les logs du step précédent.\"
+            echo "🦈 ❌ Build échouée — consulte les logs du step précédent."
             exit 1
           fi
