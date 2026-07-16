@@ -37,6 +37,9 @@ sudo apt install -y live-build squashfs-tools xorriso isolinux syslinux-utils gi
 ## Construction de l'ISO
 
 ```bash
+# 0. Simuler et valider la configuration (Fortement recommandé)
+bash scripts/simulate-build.sh
+
 # 1. Préparer l'environnement
 bash scripts/00-bootstrap.sh
 

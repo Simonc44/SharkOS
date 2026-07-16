@@ -152,13 +152,10 @@ flatpak
 xdg-desktop-portal-gtk
 
 # === Compatibilité Windows (Wine) ===
-wine
-wine32
-wine64
-winetricks
-cabextract
-zenity
-lutris
+# Note : Les paquets Wine et Lutris nécessitent l'architecture i386 (multi-arch).
+# Ils sont installés proprement dans chroot-hooks/10-install-tools.sh
+# après dpkg --add-architecture i386, pour éviter l'erreur de build.
+# wine wine32 wine64 winetricks cabextract zenity lutris
 
 # === Applications de base ===
 firefox-esr
