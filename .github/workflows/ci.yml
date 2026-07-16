@@ -1,7 +1,7 @@
 # =============================================================================
 # 🦈 SharkOS — GitHub Actions CI/CD
-# Vérifie la syntaxe, la structure, la cohérence du projet
-# et simule un chroot Debian pour valider les hooks
+# Jobs 1-5 : vérifications légères sur chaque push
+# Job 6    : build ISO complète, déclenchement MANUEL uniquement
 # =============================================================================
 
 name: 🦈 SharkOS CI
@@ -122,7 +122,7 @@ jobs:
           echo "--- Dossiers ---"
           check_dir "wallpapers"
           check_dir ".github/workflows"
-          # NOTE : iso-build/ est généré localement uniquement, pas versionné
+          # NOTE : iso-build/ est généré localement, pas versionné
 
           echo ""
           if [[ $MISSING -gt 0 ]]; then
@@ -137,8 +137,7 @@ jobs:
         run: |
           echo "🦈 Vérification : aucun SVG dans wallpapers/..."
           if find wallpapers/ -name "*.svg" 2>/dev/null | grep -q "."; then
-            echo "❌ Des fichiers .svg ont été trouvés dans wallpapers/ !"
-            echo "   SharkOS utilise uniquement des PNG."
+            echo "❌ Fichiers .svg trouvés dans wallpapers/ — PNG uniquement !"
             find wallpapers/ -name "*.svg"
             exit 1
           else
@@ -210,44 +209,34 @@ jobs:
             bash shellcheck git curl wget ca-certificates lsb-release
 
       - name: Dry-run Hook 10 (bash -n)
-        run: |
-          echo "🦈 Syntaxe bash -n : 10-install-tools.sh"
-          bash -n chroot-hooks/10-install-tools.sh && echo "✅ OK"
+        run: bash -n chroot-hooks/10-install-tools.sh && echo "✅ 10-install-tools.sh OK"
 
       - name: Dry-run Hook 20 (bash -n)
-        run: |
-          echo "🦈 Syntaxe bash -n : 20-apply-theme.sh"
-          bash -n chroot-hooks/20-apply-theme.sh && echo "✅ OK"
+        run: bash -n chroot-hooks/20-apply-theme.sh && echo "✅ 20-apply-theme.sh OK"
 
       - name: Dry-run Hook 30 (bash -n)
-        run: |
-          echo "🦈 Syntaxe bash -n : 30-configure-shell.sh"
-          bash -n chroot-hooks/30-configure-shell.sh && echo "✅ OK"
+        run: bash -n chroot-hooks/30-configure-shell.sh && echo "✅ 30-configure-shell.sh OK"
 
       - name: Dry-run Hook 40 (bash -n)
-        run: |
-          echo "🦈 Syntaxe bash -n : 40-cleanup.sh"
-          bash -n chroot-hooks/40-cleanup.sh && echo "✅ OK"
+        run: bash -n chroot-hooks/40-cleanup.sh && echo "✅ 40-cleanup.sh OK"
 
       - name: Dry-run scripts principaux (bash -n)
+        shell: bash
         run: |
           for SCRIPT in scripts/*.sh; do
-            echo "🦈 bash -n : $SCRIPT"
-            bash -n "$SCRIPT" && echo "  ✅ OK"
+            bash -n "$SCRIPT" && echo "✅ $SCRIPT OK"
           done
 
       - name: Vérifier les commandes critiques
-        # FIX : shell: bash explicite — évite l'erreur "( unexpected" sous /bin/sh
         shell: bash
         run: |
-          echo "🦈 Vérification des commandes systèmes référencées..."
-          FAIL=0
+          echo "🦈 Vérification des commandes système..."
 
           check_cmd() {
             if command -v "$1" &>/dev/null; then
               echo "  ✅ $1"
             else
-              echo "  ⚠️  $1 non trouvé (normal en CI slim)"
+              echo "  ⚠️  $1 absent (normal en CI slim)"
             fi
           }
 
@@ -291,14 +280,12 @@ jobs:
         shell: bash
         run: |
           echo "🦈 Vérification plank.dconf..."
-          if grep -q "position='bottom'" config/plank.dconf || grep -q "Position=3" config/plank.dconf; then
+          if grep -q "Position=3" config/plank.dconf || grep -q "position='bottom'" config/plank.dconf; then
             echo "✅ Plank dock positionné en bas — OK"
           else
             echo "⚠️  Position Plank non détectée — vérifier le format"
           fi
-          if grep -qiE "zoom" config/plank.dconf; then
-            echo "✅ Zoom Plank configuré — OK"
-          fi
+          grep -qiE "zoom" config/plank.dconf && echo "✅ Zoom Plank OK" || true
 
       - name: Vérifier les paquets clés dans 01-build-iso.sh
         shell: bash
@@ -330,10 +317,28 @@ jobs:
           check_pkg "firefox-esr"
 
           if [[ $FAIL -gt 0 ]]; then
-            echo "❌ $FAIL paquet(s) manquant(s) dans la liste !"
+            echo "❌ $FAIL paquet(s) manquant(s) !"
             exit 1
           fi
           echo "✅ Tous les paquets clés présents"
+
+      - name: Vérifier les miroirs Debian dans 01-build-iso.sh
+        shell: bash
+        run: |
+          echo "🦈 Vérification : miroirs Debian (pas Ubuntu) dans 01-build-iso.sh..."
+          SCRIPT="scripts/01-build-iso.sh"
+          if grep -q "deb.debian.org" "$SCRIPT"; then
+            echo "✅ Miroir deb.debian.org présent — OK"
+          else
+            echo "❌ Miroir Debian manquant dans auto/config !"
+            echo "   live-build sur Ubuntu nécessite --mirror-bootstrap deb.debian.org"
+            exit 1
+          fi
+          if grep -q "ubuntu.com" "$SCRIPT" && ! grep -q "deb.debian.org" "$SCRIPT"; then
+            echo "❌ Miroir Ubuntu détecté sans miroir Debian — bookworm introuvable !"
+            exit 1
+          fi
+          echo "✅ Configuration miroirs correcte"
 
   # =========================================================================
   # JOB 5 — RAPPORT FINAL
@@ -392,21 +397,30 @@ jobs:
           echo "======================================================== 🦈"
 
   # =========================================================================
-  # JOB 6 — BUILD ISO COMPLÈTE (déclenchement manuel uniquement)
+  # JOB 6 — BUILD ISO COMPLÈTE (déclenchement MANUEL uniquement)
+  # Utilise les miroirs Debian corrigés via 01-build-iso.sh
   # =========================================================================
   full-iso-build:
     name: "🏗️ Build ISO complète (manuel)"
     runs-on: ubuntu-22.04
     needs: [lint-shell, check-structure, test-hooks-debian, check-configs]
-    if: github.event.inputs.full_build == 'true'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.full_build == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Installer les dépendances
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            live-build squashfs-tools xorriso isolinux \
+            syslinux-utils syslinux-common genisoimage \
+            imagemagick git curl wget ca-certificates \
+            debootstrap rsync dconf-cli
+
       - name: Créer wallpapers PNG de test
         shell: bash
         run: |
-          sudo apt-get install -y imagemagick
           mkdir -p wallpapers
           convert -size 1920x1080 xc:'#0a0a0f' \
             -font DejaVu-Sans-Bold -pointsize 80 \
@@ -422,21 +436,23 @@ jobs:
             wallpapers/logo.png
           echo "✅ Wallpapers PNG créés"
 
-      - name: Installer live-build
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y \
-            live-build squashfs-tools xorriso isolinux \
-            syslinux-utils syslinux-common genisoimage \
-            git curl wget ca-certificates debootstrap \
-            rsync dconf-cli
-
       - name: Bootstrap SharkOS
         run: sudo bash scripts/00-bootstrap.sh
 
       - name: Build ISO SharkOS
         run: sudo bash scripts/01-build-iso.sh
         timeout-minutes: 90
+
+      - name: Valider l'ISO (isoinfo)
+        if: success()
+        shell: bash
+        run: |
+          sudo apt-get install -y -qq genisoimage 2>/dev/null || true
+          if [[ -f "SharkOS.iso" ]]; then
+            SIZE=$(du -sh SharkOS.iso | cut -f1)
+            echo "✅ SharkOS.iso présente : $SIZE"
+            isoinfo -d -i SharkOS.iso 2>/dev/null | grep -E "(Volume id|System id|Logical block)" || true
+          fi
 
       - name: Upload ISO comme artifact
         uses: actions/upload-artifact@v4
@@ -454,6 +470,6 @@ jobs:
             SIZE=$(du -sh SharkOS.iso | cut -f1)
             echo "🦈 ISO générée : SharkOS.iso ($SIZE)"
           else
-            echo "❌ Aucune ISO générée."
+            echo "❌ Aucune ISO générée — consulte les logs ci-dessus."
             exit 1
           fi

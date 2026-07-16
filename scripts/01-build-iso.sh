@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SharkOS — 01-build-iso.sh (VERSION FINALE)
-# Lance la construction complète de l'ISO via live-build
-# Intègre : Xubuntu settings, WhiteSur, Snap, ClamAV, Proton, Macchanger
-# Les wallpapers/logos sont en PNG (pas de SVG)
+# SharkOS — 01-build-iso.sh (VERSION FINALE v3)
+# FIX : miroirs Debian explicites (deb.debian.org), plus ubuntu.com
+#       qui ne contient pas bookworm → erreur "Failed getting release file"
 # =============================================================================
 set -euo pipefail
 
@@ -12,9 +11,13 @@ BUILD_DIR="$SHARK_DIR/iso-build"
 ISO_NAME="SharkOS.iso"
 START_TIME=$(date +%s)
 
+# Miroirs Debian officiels (bookworm est une release Debian, PAS Ubuntu)
+DEBIAN_MIRROR="http://deb.debian.org/debian"
+DEBIAN_SECURITY="http://security.debian.org/debian-security"
+
 echo ""
 echo "🦈 ============================================"
-echo "   SharkOS — Construction de l'ISO v2.0"
+echo "   SharkOS — Construction de l'ISO v3.0"
 echo "============================================ 🦈"
 echo ""
 
@@ -33,7 +36,6 @@ fi
 # --- Vérification PNG wallpaper ---
 if [[ ! -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
   echo "⚠️  ATTENTION : Aucun fichier wallpapers/wallpaper.png trouvé."
-  echo "   Place ton fond d'écran PNG dans : $SHARK_DIR/wallpapers/wallpaper.png"
   echo "   Un fond d'écran de remplacement sera généré automatiquement."
   echo ""
 fi
@@ -41,34 +43,38 @@ fi
 # --- Vérification PNG logo ---
 if [[ ! -f "$SHARK_DIR/wallpapers/logo.png" ]]; then
   echo "⚠️  ATTENTION : Aucun fichier wallpapers/logo.png trouvé."
-  echo "   Place ton logo PNG dans : $SHARK_DIR/wallpapers/logo.png"
   echo ""
 fi
 
 cd "$BUILD_DIR"
 
 # =============================================================================
-# FICHIER AUTO/CONFIG
+# FICHIER AUTO/CONFIG — Miroirs Debian explicites
 # =============================================================================
-cat > auto/config << 'AUTOCONFIG'
+cat > auto/config << AUTOCONFIG
 #!/bin/sh
 set -e
-lb config noauto \
-  --system live \
-  --distribution bookworm \
-  --debian-installer none \
-  --archive-areas "main contrib non-free non-free-firmware" \
-  --apt-options "--yes --no-install-recommends" \
-  --bootappend-live "boot=live components quiet splash hostname=sharkos username=shark" \
-  --iso-application "SharkOS" \
-  --iso-preparer "SharkOS Build System v2.0" \
-  --iso-publisher "SharkOS Project — Rapide. Furtif. Létal." \
-  --iso-volume "SHARKOS" \
-  --binary-images iso-hybrid \
-  --memtest none \
-  --firmware-binary false \
-  --firmware-chroot false \
-  "${@}"
+lb config noauto \\
+  --system live \\
+  --distribution bookworm \\
+  --debian-installer none \\
+  --archive-areas "main contrib non-free non-free-firmware" \\
+  --apt-options "--yes --no-install-recommends" \\
+  --mirror-bootstrap "${DEBIAN_MIRROR}" \\
+  --mirror-chroot "${DEBIAN_MIRROR}" \\
+  --mirror-chroot-security "${DEBIAN_SECURITY}" \\
+  --mirror-binary "${DEBIAN_MIRROR}" \\
+  --mirror-binary-security "${DEBIAN_SECURITY}" \\
+  --bootappend-live "boot=live components quiet splash hostname=sharkos username=shark" \\
+  --iso-application "SharkOS" \\
+  --iso-preparer "SharkOS Build System v3.0" \\
+  --iso-publisher "SharkOS Project" \\
+  --iso-volume "SHARKOS" \\
+  --binary-images iso-hybrid \\
+  --memtest none \\
+  --firmware-binary false \\
+  --firmware-chroot false \\
+  "\${@}"
 AUTOCONFIG
 chmod +x auto/config
 
@@ -80,7 +86,7 @@ AUTOCLEAN
 chmod +x auto/clean
 
 # =============================================================================
-# LISTE DE PAQUETS (inclus dans l'ISO)
+# LISTE DE PAQUETS
 # =============================================================================
 cat > config/package-lists/sharkos.list.chroot << 'PACKAGES'
 # === Base système ===
@@ -188,7 +194,6 @@ echo "[PRÉ-BUILD] Copie des assets PNG..."
 mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/sharkos"
 mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos"
 
-# Wallpaper PNG
 if [[ -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
   cp "$SHARK_DIR/wallpapers/wallpaper.png" \
      "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png"
@@ -197,7 +202,6 @@ if [[ -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
   echo "   ✓ wallpaper.png copié"
 fi
 
-# Logo PNG (LightDM, GRUB splash, etc.)
 if [[ -f "$SHARK_DIR/wallpapers/logo.png" ]]; then
   cp "$SHARK_DIR/wallpapers/logo.png" \
      "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/logo.png"
@@ -209,7 +213,7 @@ mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel"
 cp "$SHARK_DIR/config/.zshrc" \
    "$BUILD_DIR/config/includes.chroot/etc/skel/.zshrc"
 
-# Copie des hooks chroot (avec les numéros de priorité)
+# Copie des hooks chroot
 mkdir -p "$BUILD_DIR/config/hooks/live"
 for HOOK in "$SHARK_DIR/chroot-hooks"/*.sh; do
   HOOK_NAME=$(basename "$HOOK")
@@ -222,7 +226,7 @@ done
 # LANCEMENT DE LA BUILD
 # =============================================================================
 echo ""
-echo "[BUILD] Configuration live-build..."
+echo "[BUILD] Configuration live-build (miroir : $DEBIAN_MIRROR)..."
 bash auto/config
 
 echo "[BUILD] Construction en cours..."
@@ -260,12 +264,12 @@ if [[ -n "$ISO_FOUND" ]]; then
   echo "   → Pour flasher sur USB :"
   echo "     sudo bash scripts/02-flash-usb.sh /dev/sdX"
   echo ""
-  echo "   → Pour tester en VM (VirtualBox/QEMU) :"
+  echo "   → Pour tester en VM :"
   echo "     qemu-system-x86_64 -m 2G -cdrom $SHARK_DIR/$ISO_NAME -boot d"
   echo "============================================ 🦈"
 else
   echo ""
   echo "[ERREUR] Aucune ISO trouvée. Consulte le log :"
-  echo "  cat $SHARK_DIR/sharkos-build.log | tail -50"
+  echo "  tail -50 $SHARK_DIR/sharkos-build.log"
   exit 1
 fi
