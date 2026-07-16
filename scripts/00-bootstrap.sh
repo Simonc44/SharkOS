@@ -22,30 +22,6 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-# --- Vérification que les wallpapers PNG existent ---
-echo "[0/5] Vérification des assets PNG..."
-WARN=0
-for ASSET in wallpaper.png logo.png; do
-  if [[ -f "$SHARK_DIR/wallpapers/$ASSET" ]]; then
-    echo "   ✅ $ASSET trouvé"
-    # Vérifier que c'est bien un PNG (pas un SVG renommé)
-    MIME=$(file --mime-type -b "$SHARK_DIR/wallpapers/$ASSET")
-    if [[ "$MIME" != "image/png" ]]; then
-      echo "   ❌ $ASSET n'est pas un PNG valide (détecté : $MIME)"
-      exit 1
-    fi
-  else
-    echo "   ⚠️  $ASSET absent — il sera généré automatiquement"
-    WARN=$((WARN + 1))
-  fi
-done
-# Refuser tout SVG dans wallpapers/
-if find "$SHARK_DIR/wallpapers/" -name "*.svg" 2>/dev/null | grep -q "."; then
-  echo "   ❌ Des fichiers .svg sont présents dans wallpapers/ — SharkOS n'utilise que des PNG !"
-  find "$SHARK_DIR/wallpapers/" -name "*.svg"
-  exit 1
-fi
-
 # --- Mise à jour du système hôte ---
 echo "[1/5] Mise à jour du système hôte..."
 apt-get update -qq
@@ -68,10 +44,35 @@ apt-get install -y -qq \
   debootstrap \
   rsync \
   dconf-cli \
-  imagemagick
+  imagemagick \
+  file
 
-# --- Création de la structure iso-build ---
-echo "[3/5] Création de la structure iso-build..."
+# --- Vérification que les wallpapers PNG existent ---
+echo "[3/5] Vérification des assets PNG..."
+WARN=0
+for ASSET in wallpaper.png logo.png; do
+  if [[ -f "$SHARK_DIR/wallpapers/$ASSET" ]]; then
+    echo "   ✅ $ASSET trouvé"
+    # Vérifier que c'est bien un PNG (pas un SVG renommé)
+    MIME=$(file --mime-type -b "$SHARK_DIR/wallpapers/$ASSET")
+    if [[ "$MIME" != "image/png" ]]; then
+      echo "   ❌ $ASSET n'est pas un PNG valide (détecté : $MIME)"
+      exit 1
+    fi
+  else
+    echo "   ⚠️  $ASSET absent — il sera généré automatiquement"
+    WARN=$((WARN + 1))
+  fi
+done
+# Refuser tout SVG dans wallpapers/
+if find "$SHARK_DIR/wallpapers/" -name "*.svg" 2>/dev/null | grep -q "."; then
+  echo "   ❌ Des fichiers .svg sont présents dans wallpapers/ — SharkOS n'utilise que des PNG !"
+  find "$SHARK_DIR/wallpapers/" -name "*.svg"
+  exit 1
+fi
+
+# --- Création de la structure iso-build et copie des hooks ---
+echo "[4/5] Création de la structure iso-build et copie des hooks chroot..."
 mkdir -p "$BUILD_DIR/auto"
 mkdir -p "$BUILD_DIR/config/hooks/live"
 mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel"
@@ -79,8 +80,6 @@ mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/sharkos"
 mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos"
 mkdir -p "$BUILD_DIR/config/package-lists"
 
-# --- Copie des hooks chroot ---
-echo "[4/5] Copie des hooks chroot..."
 for HOOK in "$SHARK_DIR/chroot-hooks"/*.sh; do
   HOOK_NAME=$(basename "$HOOK")
   cp "$HOOK" "$BUILD_DIR/config/hooks/live/$HOOK_NAME"
