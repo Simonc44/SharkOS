@@ -43,6 +43,15 @@ sudo apt install -y \
 
 ---
 
+## ÉTAPE 2.5 — Valider ta configuration (Recommandé)
+
+Avant de lancer la build, tu peux simuler et valider l'intégrité de tes fichiers de configuration :
+
+```bash
+cd ~/SharkOS
+bash scripts/simulate-build.sh
+```
+
 ## ÉTAPE 3 — Lancer le bootstrap
 
 ```bash
