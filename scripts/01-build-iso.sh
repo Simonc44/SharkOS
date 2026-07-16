@@ -188,7 +188,7 @@ python3
 python3-gi
 gir1.2-gtk-3.0
 gamemode
-libgamemode-dev
+gamemode-dev
 PACKAGES
 
 # =============================================================================
