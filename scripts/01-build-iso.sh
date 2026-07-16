@@ -96,6 +96,7 @@ xfce4-goodies
 lightdm
 lightdm-gtk-greeter
 lightdm-gtk-greeter-settings
+slick-greeter
 
 # === Dock ===
 plank
