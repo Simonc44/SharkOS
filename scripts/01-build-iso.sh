@@ -74,6 +74,7 @@ lb config noauto \\
   --memtest none \\
   --firmware-binary false \\
   --firmware-chroot false \\
+  --chroot-squashfs-compression-type xz \\
   "\${@}"
 AUTOCONFIG
 chmod +x auto/config
@@ -183,6 +184,11 @@ neofetch
 inxi
 lsb-release
 gdebi-core
+python3
+python3-gi
+gir1.2-gtk-3.0
+gamemode
+libgamemode-dev
 PACKAGES
 
 # =============================================================================
@@ -266,6 +272,21 @@ for HOOK in "$SHARK_DIR/chroot-hooks"/*.sh; do
   chmod +x "$BUILD_DIR/config/hooks/live/${HOOK_NAME}"
   echo "   ✓ Hook copié : $HOOK_NAME"
 done
+
+# Copie de l'assistant d'installation graphique (Style Apple)
+echo "[PRÉ-BUILD] Copie de l'assistant d'installation graphique..."
+mkdir -p "$BUILD_DIR/config/includes.chroot/usr/local/bin"
+cp "$SHARK_DIR/config/sharkos-setup-wizard" \
+   "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-setup-wizard"
+chmod +x "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-setup-wizard"
+
+cp "$SHARK_DIR/config/sharkos-autostart-setup" \
+   "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-autostart-setup"
+chmod +x "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-autostart-setup"
+
+mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel/.config/autostart"
+cp "$SHARK_DIR/config/sharkos-setup-wizard.desktop" \
+   "$BUILD_DIR/config/includes.chroot/etc/skel/.config/autostart/sharkos-setup-wizard.desktop"
 
 # =============================================================================
 # LANCEMENT DE LA BUILD

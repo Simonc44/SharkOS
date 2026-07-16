@@ -1,0 +1,450 @@
+#!/usr/bin/env python3
+# =============================================================================
+# SharkOS — Assistant d'installation graphique (Style Apple / macOS)
+# Permet de configurer le clavier, créer l'utilisateur et lancer la session.
+# =============================================================================
+import os
+import sys
+import subprocess
+import threading
+import time
+
+try:
+    import gi
+    gi.require_version('Gtk', '3.0')
+    gi.require_version('Gdk', '3.0')
+    from gi.repository import Gtk, Gdk, GLib, Pango
+except ImportError:
+    print("[ERREUR] PyGObject ou GTK 3 manquant. L'interface ne peut pas se lancer.")
+    sys.exit(1)
+
+# Style CSS Inspiré d'Apple (Glassmorphism, sombre, boutons bleus néon, coins arrondis)
+CSS_STYLE = b"""
+window {
+    background-color: #050508;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.main-card {
+    background-color: rgba(20, 20, 30, 0.75);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 50px;
+    margin: 80px;
+}
+.title-label {
+    font-size: 30px;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+.subtitle-label {
+    font-size: 15px;
+    color: #a0a0b0;
+    margin-bottom: 30px;
+}
+.field-label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #1a8cff;
+    margin-bottom: 6px;
+}
+entry {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    padding: 12px;
+    font-size: 15px;
+    margin-bottom: 20px;
+}
+entry:focus {
+    border-color: #1a8cff;
+    box-shadow: 0 0 8px rgba(26, 140, 255, 0.4);
+}
+combobox {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    padding: 8px;
+    font-size: 15px;
+    margin-bottom: 20px;
+}
+.primary-btn {
+    background-color: #1a8cff;
+    color: #ffffff;
+    border-radius: 10px;
+    border: none;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 12px 35px;
+}
+.primary-btn:hover {
+    background-color: #4a9eff;
+}
+.secondary-btn {
+    background-color: transparent;
+    color: #a0a0b0;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 15px;
+    padding: 12px 35px;
+}
+.secondary-btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+.error-label {
+    color: #ff4a4a;
+    font-size: 13px;
+}
+.progress-bar {
+    border-radius: 10px;
+}
+"""
+
+KEYBOARDS = [
+    ("Français (AZERTY)", "fr"),
+    ("English (US QWERTY)", "us"),
+    ("English (UK QWERTY)", "gb"),
+    ("Deutsch (QWERTZ)", "de"),
+    ("Español (QWERTY)", "es"),
+    ("Italiano (QWERTY)", "it"),
+    ("Português (QWERTY)", "pt"),
+    ("Belge (AZERTY)", "be"),
+    ("Suisse (QWERTZ)", "ch")
+]
+
+class SharkOSSetupWizard(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="SharkOS Setup Assistant")
+        self.set_default_size(850, 580)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        self.set_resizable(False)
+        self.set_keep_above(True)
+
+        # Mode Plein Écran pour forcer la configuration au premier démarrage
+        self.fullscreen()
+
+        # Charger le style CSS
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(CSS_STYLE)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        # Variables de choix
+        self.selected_layout = "fr"
+        self.username = ""
+        self.password = ""
+
+        # Layout Principal
+        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.add(self.main_box)
+
+        # Container Central (Style macOS)
+        self.card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.card.get_style_context().add_class("main-card")
+        self.card.set_halign(Gtk.Align.CENTER)
+        self.card.set_valign(Gtk.Align.CENTER)
+        self.card.set_size_request(680, -1)
+
+        # Ajouter la carte dans un box extensible pour la centrer à l'écran
+        center_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        center_box.pack_start(self.card, True, False, 0)
+        self.main_box.pack_start(center_box, True, True, 0)
+
+        # Stack de pages
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.stack.set_transition_duration(500)
+        self.card.pack_start(self.stack, True, True, 0)
+
+        # Construction des pages
+        self.build_page_welcome()
+        self.build_page_keyboard()
+        self.build_page_user()
+        self.build_page_loading()
+
+        self.stack.set_visible_child_name("welcome")
+        self.show_all()
+
+    def build_page_welcome(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+
+        # Logo Requin grand format
+        logo_label = Gtk.Label(label="🦈")
+        logo_label.set_alignment(0.5, 0.5)
+        logo_label.modify_font(Pango.FontDescription("Sans 72"))
+        box.pack_start(logo_label, False, False, 10)
+
+        title = Gtk.Label()
+        title.set_markup("<span class='title-label'>Bienvenue dans SharkOS</span>")
+        title.get_style_context().add_class("title-label")
+        box.pack_start(title, False, False, 0)
+
+        subtitle = Gtk.Label(label="Configurons ensemble ton nouveau système d'exploitation en quelques étapes simples.")
+        subtitle.get_style_context().add_class("subtitle-label")
+        subtitle.set_line_wrap(True)
+        subtitle.set_justify(Gtk.Justification.CENTER)
+        box.pack_start(subtitle, False, False, 10)
+
+        # Bouton Continuer
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        btn_box.set_halign(Gtk.Align.CENTER)
+        btn = Gtk.Button(label="Commencer")
+        btn.get_style_context().add_class("primary-btn")
+        btn.connect("clicked", lambda w: self.stack.set_visible_child_name("keyboard"))
+        btn_box.pack_start(btn, False, False, 0)
+        box.pack_start(btn_box, False, False, 20)
+
+        self.stack.add_named(box, "welcome")
+
+    def build_page_keyboard(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+
+        title = Gtk.Label()
+        title.set_markup("<span class='title-label'>Disposition du clavier</span>")
+        title.get_style_context().add_class("title-label")
+        box.pack_start(title, False, False, 0)
+
+        subtitle = Gtk.Label(label="Choisis la disposition de ton clavier pour pouvoir taper confortablement.")
+        subtitle.get_style_context().add_class("subtitle-label")
+        box.pack_start(subtitle, False, False, 15)
+
+        # Label Champ
+        lbl_champ = Gtk.Label(label="Sélectionne ta langue :")
+        lbl_champ.get_style_context().add_class("field-label")
+        lbl_champ.set_halign(Gtk.Align.START)
+        box.pack_start(lbl_champ, False, False, 0)
+
+        # ComboBox pour le clavier
+        self.combo = Gtk.ComboBoxText()
+        for name, code in KEYBOARDS:
+            self.combo.append(code, name)
+        self.combo.set_active(0)
+        self.combo.connect("changed", self.on_keyboard_changed)
+        box.pack_start(self.combo, False, False, 15)
+
+        # Boutons de navigation
+        nav_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
+        nav_box.set_halign(Gtk.Align.END)
+
+        btn_back = Gtk.Button(label="Retour")
+        btn_back.get_style_context().add_class("secondary-btn")
+        btn_back.connect("clicked", lambda w: self.stack.set_visible_child_name("welcome"))
+        nav_box.pack_start(btn_back, False, False, 0)
+
+        btn_next = Gtk.Button(label="Continuer")
+        btn_next.get_style_context().add_class("primary-btn")
+        btn_next.connect("clicked", lambda w: self.stack.set_visible_child_name("user"))
+        nav_box.pack_start(btn_next, False, False, 0)
+
+        box.pack_start(nav_box, False, False, 30)
+        self.stack.add_named(box, "keyboard")
+
+    def on_keyboard_changed(self, combo):
+        self.selected_layout = combo.get_active_id()
+        # Appliquer immédiatement la disposition du clavier pour la session de saisie
+        subprocess.run(["setxkbmap", self.selected_layout], capture_output=True)
+
+    def build_page_user(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+
+        title = Gtk.Label()
+        title.set_markup("<span class='title-label'>Créer un compte</span>")
+        title.get_style_context().add_class("title-label")
+        box.pack_start(title, False, False, 0)
+
+        subtitle = Gtk.Label(label="Crée ton compte d'utilisateur principal. Tu auras un accès administrateur sudo.")
+        subtitle.get_style_context().add_class("subtitle-label")
+        box.pack_start(subtitle, False, False, 10)
+
+        # Nom d'utilisateur
+        lbl_user = Gtk.Label(label="Nom d'utilisateur (minuscules, pas d'espaces) :")
+        lbl_user.get_style_context().add_class("field-label")
+        lbl_user.set_halign(Gtk.Align.START)
+        box.pack_start(lbl_user, False, False, 0)
+
+        self.entry_username = Gtk.Entry()
+        self.entry_username.set_placeholder_text("Ex: sharky")
+        box.pack_start(self.entry_username, False, False, 5)
+
+        # Mot de passe
+        lbl_pass = Gtk.Label(label="Mot de passe :")
+        lbl_pass.get_style_context().add_class("field-label")
+        lbl_pass.set_halign(Gtk.Align.START)
+        box.pack_start(lbl_pass, False, False, 0)
+
+        self.entry_password = Gtk.Entry()
+        self.entry_password.set_visibility(False)
+        self.entry_password.set_invisible_char("•")
+        box.pack_start(self.entry_password, False, False, 5)
+
+        # Confirmer le mot de passe
+        lbl_conf = Gtk.Label(label="Confirmer le mot de passe :")
+        lbl_conf.get_style_context().add_class("field-label")
+        lbl_conf.set_halign(Gtk.Align.START)
+        box.pack_start(lbl_conf, False, False, 0)
+
+        self.entry_confirm = Gtk.Entry()
+        self.entry_confirm.set_visibility(False)
+        self.entry_confirm.set_invisible_char("•")
+        box.pack_start(self.entry_confirm, False, False, 5)
+
+        # Étiquette d'erreur
+        self.lbl_error = Gtk.Label()
+        self.lbl_error.get_style_context().add_class("error-label")
+        box.pack_start(self.lbl_error, False, False, 5)
+
+        # Boutons de navigation
+        nav_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
+        nav_box.set_halign(Gtk.Align.END)
+
+        btn_back = Gtk.Button(label="Retour")
+        btn_back.get_style_context().add_class("secondary-btn")
+        btn_back.connect("clicked", lambda w: self.stack.set_visible_child_name("keyboard"))
+        nav_box.pack_start(btn_back, False, False, 0)
+
+        btn_finish = Gtk.Button(label="Finaliser l'installation")
+        btn_finish.get_style_context().add_class("primary-btn")
+        btn_finish.connect("clicked", self.on_finish_clicked)
+        nav_box.pack_start(btn_finish, False, False, 0)
+
+        box.pack_start(nav_box, False, False, 15)
+        self.stack.add_named(box, "user")
+
+    def on_finish_clicked(self, btn):
+        username = self.entry_username.get_text().strip().lower()
+        password = self.entry_password.get_text()
+        confirm = self.entry_confirm.get_text()
+
+        # Validation
+        if not username:
+            self.lbl_error.set_text("Le nom d'utilisateur est requis.")
+            return
+        if not username.isalnum():
+            self.lbl_error.set_text("Le nom d'utilisateur ne doit contenir que des lettres et chiffres.")
+            return
+        if username in ["root", "shark"]:
+            self.lbl_error.set_text("Ce nom d'utilisateur est réservé par le système.")
+            return
+        if not password:
+            self.lbl_error.set_text("Le mot de passe est requis.")
+            return
+        if password != confirm:
+            self.lbl_error.set_text("Les mots de passe ne correspondent pas.")
+            return
+
+        self.username = username
+        self.password = password
+        self.lbl_error.set_text("")
+
+        # Lancer l'application des paramètres
+        self.stack.set_visible_child_name("loading")
+        threading.Thread(target=self.apply_configurations_bg).start()
+
+    def build_page_loading(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+
+        title = Gtk.Label()
+        title.set_markup("<span class='title-label'>Application des paramètres...</span>")
+        title.get_style_context().add_class("title-label")
+        box.pack_start(title, False, False, 10)
+
+        self.lbl_loading_status = Gtk.Label(label="Préparation de ton espace de travail SharkOS...")
+        self.lbl_loading_status.get_style_context().add_class("subtitle-label")
+        box.pack_start(self.lbl_loading_status, False, False, 10)
+
+        # Barre de progression indéterminée
+        self.pbar = Gtk.ProgressBar()
+        self.pbar.get_style_context().add_class("progress-bar")
+        self.pbar.set_size_request(-1, 8)
+        box.pack_start(self.pbar, False, False, 20)
+
+        self.pulse_active = True
+        GLib.timeout_add(100, self.pulse_progress)
+
+        self.stack.add_named(box, "loading")
+
+    def pulse_progress(self):
+        if self.pulse_active:
+            self.pbar.pulse()
+            return True
+        return False
+
+    def apply_configurations_bg(self):
+        # Étape 1 : Configurer le clavier persistant
+        GLib.idle_add(self.lbl_loading_status.set_text, "Configuration de la disposition du clavier...")
+        subprocess.run(["localectl", "set-x11-keymap", self.selected_layout], capture_output=True)
+        try:
+            with open("/etc/default/keyboard", "w") as f:
+                f.write(f'XKBMODEL="pc105"\nXKBLAYOUT="{self.selected_layout}"\nXKBVARIANT=""\nXKBOPTIONS=""\n')
+        except Exception:
+            pass
+        time.sleep(0.5)
+
+        # Étape 2 : Créer le nouvel utilisateur
+        GLib.idle_add(self.lbl_loading_status.set_text, f"Création de l'utilisateur {self.username}...")
+        subprocess.run(["useradd", "-m", "-s", "/bin/zsh", "-G", "sudo,audio,video,plugdev,netdev", self.username], capture_output=True)
+
+        # Définir le mot de passe
+        p = subprocess.Popen(["chpasswd"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        p.communicate(input=f"{self.username}:{self.password}\n")
+        time.sleep(0.5)
+
+        # Étape 3 : Copier les configurations
+        GLib.idle_add(self.lbl_loading_status.set_text, "Personnalisation du bureau de ton compte...")
+        # Copier skel + configs de home de shark vers l'utilisateur
+        subprocess.run(["rsync", "-a", "/etc/skel/", f"/home/{self.username}/"], capture_output=True)
+        subprocess.run(["rsync", "-a", "/home/shark/", f"/home/{self.username}/"], capture_output=True)
+        subprocess.run(["chown", "-R", f"{self.username}:{self.username}", f"/home/{self.username}"], capture_output=True)
+        time.sleep(0.5)
+
+        # Étape 4 : Mettre à jour LightDM pour l'autologin vers le nouvel utilisateur
+        GLib.idle_add(self.lbl_loading_status.set_text, "Mise à jour des paramètres de connexion de SharkOS...")
+        try:
+            with open("/etc/lightdm/lightdm.conf", "r") as f:
+                lines = f.readlines()
+            new_lines = []
+            for line in lines:
+                if "autologin-user=" in line:
+                    new_lines.append(f"autologin-user={self.username}\n")
+                else:
+                    new_lines.append(line)
+            with open("/etc/lightdm/lightdm.conf", "w") as f:
+                f.writelines(new_lines)
+        except Exception:
+            pass
+        time.sleep(0.5)
+
+        # Étape 5 : Créer le flag de finalisation
+        os.makedirs(f"/home/{self.username}/.config", exist_ok=True)
+        with open(f"/home/{self.username}/.config/sharkos-setup-done", "w") as f:
+            f.write("done\n")
+        subprocess.run(["chown", "-R", f"{self.username}:{self.username}", f"/home/{self.username}/.config"], capture_output=True)
+
+        # Étape 6 : Verrouiller et désactiver l'utilisateur générique 'shark' par sécurité
+        subprocess.run(["usermod", "-L", "shark"], capture_output=True)
+
+        GLib.idle_add(self.lbl_loading_status.set_text, "Chargement de ton espace SharkOS...")
+        time.sleep(1)
+
+        # Étape finale : Redémarrer LightDM ou logout pour basculer sur la session utilisateur
+        self.pulse_active = False
+        GLib.idle_add(self.finish_and_reboot)
+
+    def finish_and_reboot(self):
+        # Fermer la fenêtre
+        self.close()
+        # Redémarrer lightdm pour charger la nouvelle session utilisateur
+        subprocess.run(["systemctl", "restart", "lightdm"], capture_output=True)
+        sys.exit(0)
+
+if __name__ == "__main__":
+    # Lancer l'assistant
+    app = SharkOSSetupWizard()
+    Gtk.main()
