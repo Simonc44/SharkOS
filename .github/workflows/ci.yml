@@ -442,10 +442,10 @@ jobs:
 
           # Pin : live-build depuis Debian uniquement
           cat << 'PINEOF' | sudo tee /etc/apt/preferences.d/live-build-debian
-Package: live-build
-Pin: origin deb.debian.org
-Pin-Priority: 1001
-PINEOF
+          Package: live-build
+          Pin: origin deb.debian.org
+          Pin-Priority: 1001
+          PINEOF
 
           sudo apt-get update -qq
           sudo apt-get install -y live-build
