@@ -145,7 +145,7 @@ clamtk
 # === Snap ===
 snapd
 squashfuse
-fuse
+fuse3
 
 # === Flatpak ===
 flatpak

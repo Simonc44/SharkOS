@@ -171,7 +171,7 @@ echo "[5/10] Snap..."
 apt-get install -y --no-install-recommends \
   snapd \
   squashfuse \
-  fuse
+  fuse3
 
 # Lien symbolique Snap
 ln -sf /var/lib/snapd/snap /snap 2>/dev/null || true
