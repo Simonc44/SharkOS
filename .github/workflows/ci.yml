@@ -401,7 +401,8 @@ jobs:
                 git curl wget \
                 ca-certificates \
                 rsync dconf-cli \
-                lsb-release
+                lsb-release \
+                file
 
               echo "✅ live-build : $(live-build --version)"
               echo "✅ debootstrap : $(debootstrap --version | head -1)"
