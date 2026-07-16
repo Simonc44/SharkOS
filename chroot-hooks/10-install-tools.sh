@@ -275,36 +275,6 @@ SHARKRUN
 chmod +x /usr/local/bin/sharkrun
 
 # =============================================================================
-# INSTALLATION PROTON-GE (COMPATIBILITÉ STEAM/LUTRIS)
-# =============================================================================
-echo "   ✓ Recherche de la dernière version de Proton-GE..."
-GE_DIR="/etc/skel/.steam/root/compatibilitytools.d"
-mkdir -p "$GE_DIR"
-
-# Essayer de récupérer le dernier download URL depuis GitHub API
-GE_URL=""
-if command -v curl &>/dev/null && command -v grep &>/dev/null; then
-  # Timeout rapide pour éviter de bloquer la build si pas d'internet/API rate limit
-  GE_URL=$(curl --connect-timeout 8 --max-time 15 -s https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep "browser_download_url.*GE-Proton.*\.tar\.gz" | head -n 1 | cut -d : -f 2,3 | tr -d ' "') || true
-fi
-
-# Fallback si l'API échoue ou pas de réseau : utiliser une URL hardcodée robuste (ex: GE-Proton9-10)
-if [[ -z "${GE_URL:-}" ]]; then
-  echo "   ⚠️  Impossible de récupérer l'API GitHub (limite de taux ou hors ligne) — Utilisation du fallback statique..."
-  GE_URL="https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton9-10/GE-Proton9-10.tar.gz"
-fi
-
-echo "   ✓ Téléchargement de Proton-GE : $GE_URL"
-if wget --connect-timeout=8 --timeout=15 -q "$GE_URL" -O /tmp/proton-ge.tar.gz; then
-  echo "   ✓ Extraction de Proton-GE dans le dossier d'autostart Steam..."
-  tar -xzf /tmp/proton-ge.tar.gz -C "$GE_DIR/"
-  rm -f /tmp/proton-ge.tar.gz
-  echo "   ✓ Proton-GE installé avec succès."
-else
-  echo "   ⚠️  Téléchargement de Proton-GE échoué (réseau indisponible pendant la build chroot) — pourra être installé plus tard."
-fi
-
-# =============================================================================
 # 8. FLATPAK + UTILITAIRES
 # =============================================================================
 echo "[8/10] Flatpak + utilitaires système..."
