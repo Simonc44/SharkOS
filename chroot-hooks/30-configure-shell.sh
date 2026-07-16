@@ -182,6 +182,7 @@ create_dockitem "gufw"          "gufw.desktop" "com.ubuntu.gufw.desktop"
 # =============================================================================
 echo "[4/6] LightDM greeter..."
 mkdir -p /etc/lightdm
+mkdir -p /etc/lightdm/lightdm-gtk-greeter.conf.d
 
 cat > /etc/lightdm/lightdm.conf << 'EOF'
 [LightDM]
@@ -198,6 +199,10 @@ EOF
 LOGO_PATH="/usr/share/sharkos/logo.png"
 WALLPAPER_PATH="/usr/share/backgrounds/sharkos/sharkos.png"
 
+# Rendre les dossiers d'assets lisibles par l'utilisateur système lightdm
+chmod -R a+rX /usr/share/sharkos 2>/dev/null || true
+chmod -R a+rX /usr/share/backgrounds 2>/dev/null || true
+
 cat > /etc/lightdm/lightdm-gtk-greeter.conf << EOF
 [greeter]
 theme-name=WhiteSur-Dark
@@ -213,6 +218,9 @@ EOF
 if [[ -f "$LOGO_PATH" ]]; then
   echo "logo=${LOGO_PATH}" >> /etc/lightdm/lightdm-gtk-greeter.conf
 fi
+
+# Doubler la configuration dans conf.d pour écraser les priorités par défaut de Debian/Ubuntu (comme 30_debian.conf)
+cp /etc/lightdm/lightdm-gtk-greeter.conf /etc/lightdm/lightdm-gtk-greeter.conf.d/99-sharkos.conf
 
 # =============================================================================
 # 5. AUTOSTART (Plank + MAC randomizer)
