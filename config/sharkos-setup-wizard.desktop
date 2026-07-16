@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SharkOS Setup Assistant
+Comment=Configure ton système SharkOS (clavier, compte...)
+Exec=/usr/local/bin/sharkos-autostart-setup
+OnlyShowIn=XFCE;
+StartupNotify=false
+Terminal=false
+X-XFCE-Autostart-Delay=1

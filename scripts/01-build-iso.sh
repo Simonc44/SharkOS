@@ -74,6 +74,7 @@ lb config noauto \\
   --memtest none \\
   --firmware-binary false \\
   --firmware-chroot false \\
+  --chroot-squashfs-compression-type xz \\
   "\${@}"
 AUTOCONFIG
 chmod +x auto/config
@@ -96,6 +97,7 @@ xfce4-goodies
 lightdm
 lightdm-gtk-greeter
 lightdm-gtk-greeter-settings
+slick-greeter
 
 # === Dock ===
 plank
@@ -182,6 +184,11 @@ neofetch
 inxi
 lsb-release
 gdebi-core
+python3
+python3-gi
+gir1.2-gtk-3.0
+gamemode
+libgamemode-dev
 PACKAGES
 
 # =============================================================================
@@ -191,18 +198,65 @@ echo "[PRÉ-BUILD] Copie des assets PNG..."
 mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/sharkos"
 mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos"
 
-if [[ -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
-  cp "$SHARK_DIR/wallpapers/wallpaper.png" \
+WALLPAPER_SRC=""
+if [[ -f "$SHARK_DIR/wallpapers/sharkos-wall.png" ]]; then
+  WALLPAPER_SRC="$SHARK_DIR/wallpapers/sharkos-wall.png"
+elif [[ -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
+  WALLPAPER_SRC="$SHARK_DIR/wallpapers/wallpaper.png"
+fi
+
+LOGO_SRC=""
+if [[ -f "$SHARK_DIR/wallpapers/sharkos-logo.png" ]]; then
+  LOGO_SRC="$SHARK_DIR/wallpapers/sharkos-logo.png"
+elif [[ -f "$SHARK_DIR/wallpapers/logo.png" ]]; then
+  LOGO_SRC="$SHARK_DIR/wallpapers/logo.png"
+fi
+
+if [[ -n "$WALLPAPER_SRC" ]]; then
+  cp "$WALLPAPER_SRC" \
      "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png"
-  cp "$SHARK_DIR/wallpapers/wallpaper.png" \
+  cp "$WALLPAPER_SRC" \
      "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos/sharkos.png"
   echo "   ✓ wallpaper.png copié"
 fi
 
-if [[ -f "$SHARK_DIR/wallpapers/logo.png" ]]; then
-  cp "$SHARK_DIR/wallpapers/logo.png" \
+if [[ -n "$LOGO_SRC" ]]; then
+  cp "$LOGO_SRC" \
      "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/logo.png"
   echo "   ✓ logo.png copié"
+fi
+
+# =============================================================================
+# PERSONNALISATION DU BOOTLOADER (isolinux / syslinux)
+# =============================================================================
+echo "[PRÉ-BUILD] Personnalisation du bootloader (logo + textes)..."
+mkdir -p "$BUILD_DIR/config/bootloaders"
+if [[ -d "/usr/share/live/build/bootloaders" ]]; then
+  cp -r /usr/share/live/build/bootloaders/* "$BUILD_DIR/config/bootloaders/"
+  echo "   ✓ Bootloaders par défaut copiés pour personnalisation"
+fi
+
+# Suppression de splash.svg pour forcer l'usage de splash.png
+find "$BUILD_DIR/config/bootloaders" -name "splash.svg" -delete 2>/dev/null || true
+
+# Génération du splash.png (640x480) avec le logo de l'utilisateur
+if [[ -n "$LOGO_SRC" ]]; then
+  echo "   ✓ Génération du splash.png de boot..."
+  mkdir -p "$BUILD_DIR/config/bootloaders/isolinux"
+  mkdir -p "$BUILD_DIR/config/bootloaders/syslinux"
+  convert -size 640x480 xc:'#0a0a0f' \
+    \( "$LOGO_SRC" -resize 140x140 \) -geometry +40+80 -composite \
+    -font DejaVu-Sans-Bold -pointsize 32 -fill '#1a8cff' -draw "text 40,260 'SharkOS 🦈'" \
+    -font DejaVu-Sans -pointsize 14 -fill '#4a9eff' -draw "text 40,290 'Rapide. Furtif. Létal.'" \
+    "$BUILD_DIR/config/bootloaders/isolinux/splash.png" 2>/dev/null || true
+  cp "$BUILD_DIR/config/bootloaders/isolinux/splash.png" "$BUILD_DIR/config/bootloaders/syslinux/splash.png" 2>/dev/null || true
+fi
+
+# Remplacement de "Debian" par "SharkOS" dans les menus de boot
+if [[ -d "$BUILD_DIR/config/bootloaders" ]]; then
+  find "$BUILD_DIR/config/bootloaders" -type f -exec sed -i 's/Debian GNU\/Linux/SharkOS/g' {} + 2>/dev/null || true
+  find "$BUILD_DIR/config/bootloaders" -type f -exec sed -i 's/Debian/SharkOS/g' {} + 2>/dev/null || true
+  echo "   ✓ Textes du bootloader mis à jour (Debian → SharkOS)"
 fi
 
 # Copie du .zshrc dans skel
@@ -218,6 +272,21 @@ for HOOK in "$SHARK_DIR/chroot-hooks"/*.sh; do
   chmod +x "$BUILD_DIR/config/hooks/live/${HOOK_NAME}"
   echo "   ✓ Hook copié : $HOOK_NAME"
 done
+
+# Copie de l'assistant d'installation graphique (Style Apple)
+echo "[PRÉ-BUILD] Copie de l'assistant d'installation graphique..."
+mkdir -p "$BUILD_DIR/config/includes.chroot/usr/local/bin"
+cp "$SHARK_DIR/config/sharkos-setup-wizard" \
+   "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-setup-wizard"
+chmod +x "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-setup-wizard"
+
+cp "$SHARK_DIR/config/sharkos-autostart-setup" \
+   "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-autostart-setup"
+chmod +x "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-autostart-setup"
+
+mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel/.config/autostart"
+cp "$SHARK_DIR/config/sharkos-setup-wizard.desktop" \
+   "$BUILD_DIR/config/includes.chroot/etc/skel/.config/autostart/sharkos-setup-wizard.desktop"
 
 # =============================================================================
 # LANCEMENT DE LA BUILD
