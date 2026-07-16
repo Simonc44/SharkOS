@@ -325,17 +325,12 @@ jobs:
       - name: Vérifier les miroirs Debian dans 01-build-iso.sh
         shell: bash
         run: |
-          echo "🦈 Vérification : miroirs Debian (pas Ubuntu) dans 01-build-iso.sh..."
+          echo "🦈 Vérification : miroirs Debian dans 01-build-iso.sh..."
           SCRIPT="scripts/01-build-iso.sh"
           if grep -q "deb.debian.org" "$SCRIPT"; then
             echo "✅ Miroir deb.debian.org présent — OK"
           else
-            echo "❌ Miroir Debian manquant dans auto/config !"
-            echo "   live-build sur Ubuntu nécessite --mirror-bootstrap deb.debian.org"
-            exit 1
-          fi
-          if grep -q "ubuntu.com" "$SCRIPT" && ! grep -q "deb.debian.org" "$SCRIPT"; then
-            echo "❌ Miroir Ubuntu détecté sans miroir Debian — bookworm introuvable !"
+            echo "❌ Miroir Debian manquant — live-build nécessite --mirror-bootstrap deb.debian.org"
             exit 1
           fi
           echo "✅ Configuration miroirs correcte"
@@ -398,7 +393,12 @@ jobs:
 
   # =========================================================================
   # JOB 6 — BUILD ISO COMPLÈTE (déclenchement MANUEL uniquement)
-  # Utilise les miroirs Debian corrigés via 01-build-iso.sh
+  #
+  # IMPORTANT : live-build doit être installé depuis les dépôts DEBIAN
+  # (pas Ubuntu). La version Ubuntu de live-build injecte "ubuntu-keyring"
+  # comme dépendance dans le chroot, paquet inexistant sur Debian.
+  # Solution : on ajoute temporairement deb.debian.org dans les sources APT
+  # du runner Ubuntu, on installe live-build depuis là, puis on le retire.
   # =========================================================================
   full-iso-build:
     name: "🏗️ Build ISO complète (manuel)"
@@ -409,14 +409,52 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Installer les dépendances
+      - name: Installer les dépendances de base (hors live-build)
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y \
-            live-build squashfs-tools xorriso isolinux \
+            squashfs-tools xorriso isolinux \
             syslinux-utils syslinux-common genisoimage \
             imagemagick git curl wget ca-certificates \
-            debootstrap rsync dconf-cli
+            debootstrap rsync dconf-cli \
+            debian-archive-keyring
+
+      - name: Installer live-build depuis les dépôts Debian Bookworm
+        # FIX CRITIQUE : live-build Ubuntu est patché pour ajouter ubuntu-keyring
+        # dans le chroot → paquet inexistant sur Debian → build échoue.
+        # On installe le live-build OFFICIEL depuis deb.debian.org.
+        shell: bash
+        run: |
+          echo "🦈 Ajout temporaire du dépôt Debian Bookworm pour live-build..."
+
+          # Ajouter la clé GPG Debian
+          sudo mkdir -p /usr/local/share/keyrings
+          sudo gpg --no-default-keyring \
+            --keyring /usr/local/share/keyrings/debian-bookworm.gpg \
+            --keyserver keyserver.ubuntu.com \
+            --recv-keys 0E98404D386FA1D9 648ACFD622F3D138 2>/dev/null || \
+          sudo apt-get install -y debian-archive-keyring 2>/dev/null || true
+
+          # Ajouter le source Debian Bookworm pinné à priorité 1001
+          # pour qu'il prime sur les paquets Ubuntu
+          echo "deb [trusted=yes] http://deb.debian.org/debian bookworm main" \
+            | sudo tee /etc/apt/sources.list.d/debian-bookworm-livebuild.list
+
+          # Pin : live-build depuis Debian uniquement
+          cat << 'PINEOF' | sudo tee /etc/apt/preferences.d/live-build-debian
+Package: live-build
+Pin: origin deb.debian.org
+Pin-Priority: 1001
+PINEOF
+
+          sudo apt-get update -qq
+          sudo apt-get install -y live-build
+          echo "✅ live-build version : $(live-build --version)"
+
+          # Nettoyage : retirer la source Debian (plus nécessaire)
+          sudo rm -f /etc/apt/sources.list.d/debian-bookworm-livebuild.list
+          sudo rm -f /etc/apt/preferences.d/live-build-debian
+          sudo apt-get update -qq 2>/dev/null || true
 
       - name: Créer wallpapers PNG de test
         shell: bash
@@ -443,15 +481,15 @@ jobs:
         run: sudo bash scripts/01-build-iso.sh
         timeout-minutes: 90
 
-      - name: Valider l'ISO (isoinfo)
+      - name: Valider l'ISO
         if: success()
         shell: bash
         run: |
-          sudo apt-get install -y -qq genisoimage 2>/dev/null || true
           if [[ -f "SharkOS.iso" ]]; then
             SIZE=$(du -sh SharkOS.iso | cut -f1)
-            echo "✅ SharkOS.iso présente : $SIZE"
-            isoinfo -d -i SharkOS.iso 2>/dev/null | grep -E "(Volume id|System id|Logical block)" || true
+            echo "✅ SharkOS.iso générée : $SIZE"
+            isoinfo -d -i SharkOS.iso 2>/dev/null \
+              | grep -E "(Volume id|System id|Logical block)" || true
           fi
 
       - name: Upload ISO comme artifact
