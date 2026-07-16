@@ -41,6 +41,10 @@ if ! id "shark" &>/dev/null; then
   useradd -m -s "$(command -v zsh)" shark 2>/dev/null || true
 fi
 
+# Définir le mot de passe par défaut pour 'shark' et 'root' (shark)
+echo "shark:shark" | chpasswd 2>/dev/null || true
+echo "root:shark" | chpasswd 2>/dev/null || true
+
 # Installation Oh My Zsh en mode non-interactif
 export RUNZSH=no
 export CHSH=no
@@ -171,7 +175,7 @@ echo "[5/10] Snap..."
 apt-get install -y --no-install-recommends \
   snapd \
   squashfuse \
-  fuse
+  fuse3
 
 # Lien symbolique Snap
 ln -sf /var/lib/snapd/snap /snap 2>/dev/null || true
