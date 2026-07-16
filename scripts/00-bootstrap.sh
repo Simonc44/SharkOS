@@ -50,20 +50,46 @@ apt-get install -y -qq \
 # --- Vérification que les wallpapers PNG existent ---
 echo "[3/5] Vérification des assets PNG..."
 WARN=0
-for ASSET in wallpaper.png logo.png; do
-  if [[ -f "$SHARK_DIR/wallpapers/$ASSET" ]]; then
-    echo "   ✅ $ASSET trouvé"
-    # Vérifier que c'est bien un PNG (pas un SVG renommé)
-    MIME=$(file --mime-type -b "$SHARK_DIR/wallpapers/$ASSET")
-    if [[ "$MIME" != "image/png" ]]; then
-      echo "   ❌ $ASSET n'est pas un PNG valide (détecté : $MIME)"
-      exit 1
-    fi
-  else
-    echo "   ⚠️  $ASSET absent — il sera généré automatiquement"
-    WARN=$((WARN + 1))
+
+# Déterminer les vrais assets
+WALLPAPER_SRC=""
+if [[ -f "$SHARK_DIR/wallpapers/sharkos-wall.png" ]]; then
+  WALLPAPER_SRC="$SHARK_DIR/wallpapers/sharkos-wall.png"
+elif [[ -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
+  WALLPAPER_SRC="$SHARK_DIR/wallpapers/wallpaper.png"
+fi
+
+LOGO_SRC=""
+if [[ -f "$SHARK_DIR/wallpapers/sharkos-logo.png" ]]; then
+  LOGO_SRC="$SHARK_DIR/wallpapers/sharkos-logo.png"
+elif [[ -f "$SHARK_DIR/wallpapers/logo.png" ]]; then
+  LOGO_SRC="$SHARK_DIR/wallpapers/logo.png"
+fi
+
+if [[ -n "$WALLPAPER_SRC" ]]; then
+  echo "   ✅ Wallpaper trouvé : $(basename "$WALLPAPER_SRC")"
+  MIME=$(file --mime-type -b "$WALLPAPER_SRC")
+  if [[ "$MIME" != "image/png" ]]; then
+    echo "   ❌ $WALLPAPER_SRC n'est pas un PNG valide (détecté : $MIME)"
+    exit 1
   fi
-done
+else
+  echo "   ⚠️  Wallpaper absent — il sera généré automatiquement"
+  WARN=$((WARN + 1))
+fi
+
+if [[ -n "$LOGO_SRC" ]]; then
+  echo "   ✅ Logo trouvé : $(basename "$LOGO_SRC")"
+  MIME=$(file --mime-type -b "$LOGO_SRC")
+  if [[ "$MIME" != "image/png" ]]; then
+    echo "   ❌ $LOGO_SRC n'est pas un PNG valide (détecté : $MIME)"
+    exit 1
+  fi
+else
+  echo "   ⚠️  Logo absent — il sera généré automatiquement"
+  WARN=$((WARN + 1))
+fi
+
 # Refuser tout SVG dans wallpapers/
 if find "$SHARK_DIR/wallpapers/" -name "*.svg" 2>/dev/null | grep -q "."; then
   echo "   ❌ Des fichiers .svg sont présents dans wallpapers/ — SharkOS n'utilise que des PNG !"
@@ -101,10 +127,10 @@ cp "$SHARK_DIR/config/plank.dconf" \
 echo "   ✓ plank.dconf"
 
 # wallpaper.png (PNG obligatoire — génère si absent)
-if [[ -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
-  cp "$SHARK_DIR/wallpapers/wallpaper.png" \
+if [[ -n "$WALLPAPER_SRC" ]]; then
+  cp "$WALLPAPER_SRC" \
      "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png"
-  cp "$SHARK_DIR/wallpapers/wallpaper.png" \
+  cp "$WALLPAPER_SRC" \
      "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos/sharkos.png"
   echo "   ✓ wallpaper.png"
 else
@@ -123,8 +149,8 @@ else
 fi
 
 # logo.png (PNG — génère si absent)
-if [[ -f "$SHARK_DIR/wallpapers/logo.png" ]]; then
-  cp "$SHARK_DIR/wallpapers/logo.png" \
+if [[ -n "$LOGO_SRC" ]]; then
+  cp "$LOGO_SRC" \
      "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/logo.png"
   echo "   ✓ logo.png"
 else
