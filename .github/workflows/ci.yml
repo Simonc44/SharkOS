@@ -440,15 +440,11 @@ jobs:
           echo "deb [trusted=yes] http://deb.debian.org/debian bookworm main" \
             | sudo tee /etc/apt/sources.list.d/debian-bookworm-livebuild.list
 
-          # Pin : live-build depuis Debian uniquement
-          cat << 'PINEOF' | sudo tee /etc/apt/preferences.d/live-build-debian
-          Package: live-build
-          Pin: origin deb.debian.org
-          Pin-Priority: 1001
-          PINEOF
+          # Pin : live-build depuis Debian uniquement, et empêcher la mise à niveau des autres paquets système vers Debian
+          printf 'Package: live-build\nPin: origin deb.debian.org\nPin-Priority: 1001\n\nPackage: *\nPin: origin deb.debian.org\nPin-Priority: 1\n' | sudo tee /etc/apt/preferences.d/live-build-debian
 
           sudo apt-get update -qq
-          sudo apt-get install -y live-build
+          sudo apt-get install -y --no-install-recommends live-build
           echo "✅ live-build version : $(live-build --version)"
 
           # Nettoyage : retirer la source Debian (plus nécessaire)
