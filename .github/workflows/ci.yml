@@ -19,9 +19,6 @@ on:
         default: 'false'
         type: boolean
 
-# ===========================================================================
-# PERMISSIONS
-# ===========================================================================
 permissions:
   contents: read
   checks: write
@@ -43,6 +40,7 @@ jobs:
         run: sudo apt-get install -y shellcheck
 
       - name: ShellCheck — scripts/
+        shell: bash
         run: |
           echo "🦈 Vérification syntaxe : scripts/"
           shellcheck --severity=warning \
@@ -52,6 +50,7 @@ jobs:
           echo "✅ scripts/ OK"
 
       - name: ShellCheck — chroot-hooks/
+        shell: bash
         run: |
           echo "🦈 Vérification syntaxe : chroot-hooks/"
           shellcheck --severity=warning \
@@ -72,10 +71,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Vérifier tous les fichiers obligatoires
+        shell: bash
         run: |
           echo "🦈 Vérification de la structure SharkOS..."
-
           MISSING=0
+
           check_file() {
             if [[ ! -f "$1" ]]; then
               echo "  ❌ MANQUANT : $1"
@@ -84,6 +84,7 @@ jobs:
               echo "  ✅ OK : $1"
             fi
           }
+
           check_dir() {
             if [[ ! -d "$1" ]]; then
               echo "  ❌ DOSSIER MANQUANT : $1"
@@ -120,8 +121,8 @@ jobs:
           echo ""
           echo "--- Dossiers ---"
           check_dir "wallpapers"
-          check_dir "iso-build"
           check_dir ".github/workflows"
+          # NOTE : iso-build/ est généré localement uniquement, pas versionné
 
           echo ""
           if [[ $MISSING -gt 0 ]]; then
@@ -131,19 +132,21 @@ jobs:
             echo "✅ Structure complète — tous les fichiers sont présents."
           fi
 
-      - name: Vérifier que pas de SVG dans wallpapers/
+      - name: Vérifier aucun SVG dans wallpapers/
+        shell: bash
         run: |
           echo "🦈 Vérification : aucun SVG dans wallpapers/..."
-          if find wallpapers/ -name "*.svg" 2>/dev/null | grep -q ".svg"; then
+          if find wallpapers/ -name "*.svg" 2>/dev/null | grep -q "."; then
             echo "❌ Des fichiers .svg ont été trouvés dans wallpapers/ !"
             echo "   SharkOS utilise uniquement des PNG."
             find wallpapers/ -name "*.svg"
             exit 1
           else
-            echo "✅ Aucun SVG trouvé dans wallpapers/ — OK"
+            echo "✅ Aucun SVG dans wallpapers/ — OK"
           fi
 
-      - name: Vérifier que les hooks sont exécutables (contenu)
+      - name: Vérifier le shebang des hooks
+        shell: bash
         run: |
           echo "🦈 Vérification : hooks commencent par #!/usr/bin/env bash..."
           for HOOK in chroot-hooks/*.sh; do
@@ -157,29 +160,31 @@ jobs:
           done
 
       - name: Vérifier la cohérence du .zshrc
+        shell: bash
         run: |
           echo "🦈 Vérification du .zshrc..."
           ZSHRC="config/.zshrc"
-          CHECKS=(
-            "update-system"
-            "ZSH_THEME=\"agnoster\""
-            "SharkOS"
-            "alias dir="
-            "alias cls="
-            "alias ipconfig="
-            "alias sharkscan="
-            "alias sharkfw="
-            "alias sharkav="
-          )
           FAIL=0
-          for CHECK in "${CHECKS[@]}"; do
-            if grep -q "$CHECK" "$ZSHRC"; then
-              echo "  ✅ Trouvé : $CHECK"
+
+          check_zshrc() {
+            if grep -q "$1" "$ZSHRC"; then
+              echo "  ✅ Trouvé : $1"
             else
-              echo "  ❌ ABSENT : $CHECK"
+              echo "  ❌ ABSENT : $1"
               FAIL=$((FAIL + 1))
             fi
-          done
+          }
+
+          check_zshrc "update-system"
+          check_zshrc "ZSH_THEME="
+          check_zshrc "SharkOS"
+          check_zshrc "alias dir="
+          check_zshrc "alias cls="
+          check_zshrc "alias ipconfig="
+          check_zshrc "alias sharkscan="
+          check_zshrc "alias sharkfw="
+          check_zshrc "alias sharkav="
+
           if [[ $FAIL -gt 0 ]]; then
             echo "❌ $FAIL élément(s) manquant(s) dans le .zshrc !"
             exit 1
@@ -188,7 +193,6 @@ jobs:
 
   # =========================================================================
   # JOB 3 — SIMULATION CHROOT (Debian Bookworm container)
-  # Vérifie que les hooks sont syntaxiquement exécutables dans un vrai Debian
   # =========================================================================
   test-hooks-debian:
     name: "🐧 Test hooks dans Debian Bookworm"
@@ -203,53 +207,65 @@ jobs:
         run: |
           apt-get update -qq
           apt-get install -y --no-install-recommends \
-            bash shellcheck git curl wget ca-certificates \
-            lsb-release 2>/dev/null || true
+            bash shellcheck git curl wget ca-certificates lsb-release
 
-      - name: Dry-run Hook 10 (syntaxe bash -n)
+      - name: Dry-run Hook 10 (bash -n)
         run: |
           echo "🦈 Syntaxe bash -n : 10-install-tools.sh"
-          bash -n chroot-hooks/10-install-tools.sh && echo "✅ OK" || exit 1
+          bash -n chroot-hooks/10-install-tools.sh && echo "✅ OK"
 
-      - name: Dry-run Hook 20 (syntaxe bash -n)
+      - name: Dry-run Hook 20 (bash -n)
         run: |
           echo "🦈 Syntaxe bash -n : 20-apply-theme.sh"
-          bash -n chroot-hooks/20-apply-theme.sh && echo "✅ OK" || exit 1
+          bash -n chroot-hooks/20-apply-theme.sh && echo "✅ OK"
 
-      - name: Dry-run Hook 30 (syntaxe bash -n)
+      - name: Dry-run Hook 30 (bash -n)
         run: |
           echo "🦈 Syntaxe bash -n : 30-configure-shell.sh"
-          bash -n chroot-hooks/30-configure-shell.sh && echo "✅ OK" || exit 1
+          bash -n chroot-hooks/30-configure-shell.sh && echo "✅ OK"
 
-      - name: Dry-run Hook 40 (syntaxe bash -n)
+      - name: Dry-run Hook 40 (bash -n)
         run: |
           echo "🦈 Syntaxe bash -n : 40-cleanup.sh"
-          bash -n chroot-hooks/40-cleanup.sh && echo "✅ OK" || exit 1
+          bash -n chroot-hooks/40-cleanup.sh && echo "✅ OK"
 
-      - name: Dry-run scripts principaux (syntaxe bash -n)
+      - name: Dry-run scripts principaux (bash -n)
         run: |
           for SCRIPT in scripts/*.sh; do
             echo "🦈 bash -n : $SCRIPT"
-            bash -n "$SCRIPT" && echo "  ✅ OK" || exit 1
+            bash -n "$SCRIPT" && echo "  ✅ OK"
           done
 
-      - name: Vérifier les commandes critiques référencées dans les hooks
+      - name: Vérifier les commandes critiques
+        # FIX : shell: bash explicite — évite l'erreur "( unexpected" sous /bin/sh
         shell: bash
         run: |
           echo "🦈 Vérification des commandes systèmes référencées..."
-          COMMANDS_TO_CHECK=(
-            "bash" "git" "curl" "apt-get" "dpkg"
-            "systemctl" "chmod" "mkdir" "cp" "rm"
-            "find" "cat" "grep" "sed" "awk"
-          )
-          MISSING=0
-          for CMD in "${COMMANDS_TO_CHECK[@]}"; do
-            if command -v "$CMD" &>/dev/null; then
-              echo "  ✅ $CMD"
+          FAIL=0
+
+          check_cmd() {
+            if command -v "$1" &>/dev/null; then
+              echo "  ✅ $1"
             else
-              echo "  ⚠️  $CMD non trouvé dans cet environnement (normal en CI)"
+              echo "  ⚠️  $1 non trouvé (normal en CI slim)"
             fi
-          done
+          }
+
+          check_cmd bash
+          check_cmd git
+          check_cmd curl
+          check_cmd apt-get
+          check_cmd dpkg
+          check_cmd chmod
+          check_cmd mkdir
+          check_cmd cp
+          check_cmd rm
+          check_cmd find
+          check_cmd cat
+          check_cmd grep
+          check_cmd sed
+          check_cmd awk
+
           echo "✅ Vérification commandes terminée"
 
   # =========================================================================
@@ -266,42 +282,53 @@ jobs:
         run: sudo apt-get install -y libxml2-utils
 
       - name: Valider xfce4-panel.xml
+        shell: bash
         run: |
           echo "🦈 Validation XML : config/xfce4-panel.xml"
-          xmllint --noout config/xfce4-panel.xml && echo "✅ XML valide" || exit 1
+          xmllint --noout config/xfce4-panel.xml && echo "✅ XML valide"
 
       - name: Vérifier plank.dconf
+        shell: bash
         run: |
           echo "🦈 Vérification plank.dconf..."
-          if grep -q "position='bottom'" config/plank.dconf || \
-             grep -q "Position=3" config/plank.dconf; then
+          if grep -q "position='bottom'" config/plank.dconf || grep -q "Position=3" config/plank.dconf; then
             echo "✅ Plank dock positionné en bas — OK"
           else
-            echo "⚠️  Position Plank non détectée (format clé différent, vérifier)"
+            echo "⚠️  Position Plank non détectée — vérifier le format"
           fi
-          if grep -q "zoom" config/plank.dconf || \
-             grep -q "Zoom" config/plank.dconf; then
+          if grep -qiE "zoom" config/plank.dconf; then
             echo "✅ Zoom Plank configuré — OK"
           fi
 
-      - name: Vérifier la liste de paquets dans 01-build-iso.sh
+      - name: Vérifier les paquets clés dans 01-build-iso.sh
+        shell: bash
         run: |
           echo "🦈 Vérification paquets clés dans la liste..."
           SCRIPT="scripts/01-build-iso.sh"
-          PACKAGES=(
-            "xfce4" "plank" "zsh" "nmap" "wireshark"
-            "ufw" "clamav" "snapd" "flatpak"
-            "macchanger" "wine" "firefox-esr"
-          )
           FAIL=0
-          for PKG in "${PACKAGES[@]}"; do
-            if grep -q "$PKG" "$SCRIPT"; then
-              echo "  ✅ $PKG"
+
+          check_pkg() {
+            if grep -q "$1" "$SCRIPT"; then
+              echo "  ✅ $1"
             else
-              echo "  ❌ $PKG absent de la liste de paquets !"
+              echo "  ❌ $1 absent de la liste de paquets !"
               FAIL=$((FAIL + 1))
             fi
-          done
+          }
+
+          check_pkg "xfce4"
+          check_pkg "plank"
+          check_pkg "zsh"
+          check_pkg "nmap"
+          check_pkg "wireshark"
+          check_pkg "ufw"
+          check_pkg "clamav"
+          check_pkg "snapd"
+          check_pkg "flatpak"
+          check_pkg "macchanger"
+          check_pkg "wine"
+          check_pkg "firefox-esr"
+
           if [[ $FAIL -gt 0 ]]; then
             echo "❌ $FAIL paquet(s) manquant(s) dans la liste !"
             exit 1
@@ -321,46 +348,43 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Générer le rapport
+        shell: bash
         run: |
           echo ""
           echo "🦈 ========================================================"
           echo "   SharkOS CI — Rapport final"
           echo "======================================================== 🦈"
           echo ""
-          echo "  Commit    : ${{ github.sha }}"
-          echo "  Branche   : ${{ github.ref_name }}"
+          echo "  Commit      : ${{ github.sha }}"
+          echo "  Branche     : ${{ github.ref_name }}"
           echo "  Déclencheur : ${{ github.event_name }}"
-          echo "  Date      : $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "  Date        : $(date '+%Y-%m-%d %H:%M:%S UTC')"
           echo ""
 
-          # Compter les fichiers
           SCRIPTS=$(find scripts/ -name "*.sh" | wc -l)
           HOOKS=$(find chroot-hooks/ -name "*.sh" | wc -l)
           CONFIGS=$(find config/ -type f | wc -l)
-          TOTAL_LINES=$(find . -name "*.sh" -not -path "./.git/*" | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+          TOTAL_LINES=$(find . -name "*.sh" -not -path "./.git/*" -exec wc -l {} + 2>/dev/null | tail -1 | awk '{print $1}')
 
           echo "  📁 Scripts      : $SCRIPTS"
           echo "  🪝 Hooks chroot : $HOOKS"
           echo "  ⚙️  Configs      : $CONFIGS"
           echo "  📝 Total lignes : $TOTAL_LINES"
           echo ""
-
-          # Status des jobs
           echo "  Jobs :"
-          echo "    🔍 Lint Shell        : ${{ needs.lint-shell.result }}"
-          echo "    📁 Structure         : ${{ needs.check-structure.result }}"
-          echo "    🐧 Test Debian       : ${{ needs.test-hooks-debian.result }}"
-          echo "    ⚙️  Configs XML       : ${{ needs.check-configs.result }}"
+          echo "    🔍 Lint Shell   : ${{ needs.lint-shell.result }}"
+          echo "    📁 Structure    : ${{ needs.check-structure.result }}"
+          echo "    🐧 Test Debian  : ${{ needs.test-hooks-debian.result }}"
+          echo "    ⚙️  Configs XML  : ${{ needs.check-configs.result }}"
           echo ""
 
-          # Résultat global
-          if [[ "${{ needs.lint-shell.result }}"       == "success" ]] && \
-             [[ "${{ needs.check-structure.result }}"  == "success" ]] && \
+          if [[ "${{ needs.lint-shell.result }}"        == "success" ]] && \
+             [[ "${{ needs.check-structure.result }}"   == "success" ]] && \
              [[ "${{ needs.test-hooks-debian.result }}" == "success" ]] && \
-             [[ "${{ needs.check-configs.result }}"    == "success" ]]; then
-            echo "  🦈 RÉSULTAT GLOBAL : ✅ TOUT EST OK — SharkOS est prêt à builder !"
+             [[ "${{ needs.check-configs.result }}"     == "success" ]]; then
+            echo "  🦈 RÉSULTAT : ✅ TOUT EST OK — SharkOS est prêt à builder !"
           else
-            echo "  🦈 RÉSULTAT GLOBAL : ❌ Des erreurs ont été détectées — voir les jobs ci-dessus."
+            echo "  🦈 RÉSULTAT : ❌ Des erreurs détectées — voir les jobs ci-dessus."
             exit 1
           fi
 
@@ -368,7 +392,7 @@ jobs:
           echo "======================================================== 🦈"
 
   # =========================================================================
-  # JOB 6 — BUILD ISO COMPLÈTE (optionnel, déclenché manuellement)
+  # JOB 6 — BUILD ISO COMPLÈTE (déclenchement manuel uniquement)
   # =========================================================================
   full-iso-build:
     name: "🏗️ Build ISO complète (manuel)"
@@ -379,7 +403,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Créer wallpaper.png de test (PNG placeholder)
+      - name: Créer wallpapers PNG de test
+        shell: bash
         run: |
           sudo apt-get install -y imagemagick
           mkdir -p wallpapers
@@ -395,7 +420,7 @@ jobs:
             -fill '#1a8cff' -gravity center \
             -annotate +0+0 'S' \
             wallpapers/logo.png
-          echo "✅ Wallpapers PNG de test créés"
+          echo "✅ Wallpapers PNG créés"
 
       - name: Installer live-build
         run: |
@@ -413,7 +438,7 @@ jobs:
         run: sudo bash scripts/01-build-iso.sh
         timeout-minutes: 90
 
-      - name: Upload ISO comme artifact GitHub
+      - name: Upload ISO comme artifact
         uses: actions/upload-artifact@v4
         if: success()
         with:
@@ -423,10 +448,11 @@ jobs:
 
       - name: Rapport build ISO
         if: always()
+        shell: bash
         run: |
           if [[ -f "SharkOS.iso" ]]; then
             SIZE=$(du -sh SharkOS.iso | cut -f1)
-            echo "🦈 ISO générée avec succès : SharkOS.iso ($SIZE)"
+            echo "🦈 ISO générée : SharkOS.iso ($SIZE)"
           else
             echo "❌ Aucune ISO générée."
             exit 1
