@@ -247,26 +247,29 @@ fi
 echo "[5/6] Autostart..."
 mkdir -p "$SKEL/.config/autostart"
 
-cat > "$SKEL/.config/autostart/plank.desktop" << 'EOF'
-[Desktop Entry]
-Type=Application
-Name=Plank
-Comment=SharkOS Dock
-Exec=plank
-OnlyShowIn=XFCE;
-X-XFCE-Autostart-Override=true
-EOF
-
-# MAC randomizer au login (sans pkexec — le service systemd s'en charge au boot)
-# Ce .desktop est informatif mais pas exécuté automatiquement (géré par systemd)
 cat > "$SKEL/.config/autostart/sharkos-welcome.desktop" << 'EOF'
 [Desktop Entry]
 Type=Application
 Name=SharkOS Welcome
-Comment=Message de bienvenue SharkOS
-Exec=bash -c 'sleep 3 && xfce4-terminal -e "bash -c \"echo; echo 🦈 Bienvenue dans SharkOS\! ; echo; bash --login\""'
+Comment=Terminal de bienvenue SharkOS
+Exec=bash -c 'sleep 2 && xfce4-terminal \
+  --title="🦈 SharkOS" \
+  --geometry=80x24 \
+  --command="bash -c \"\
+    clear; \
+    echo; \
+    printf \"\033[1;36m╔══════════════════════════════════════════════╗\033[0m\n\"; \
+    printf \"\033[1;36m║\033[1m  🦈  Bienvenue dans SharkOS                  \033[1;36m║\033[0m\n\"; \
+    printf \"\033[1;36m║\033[0m  Rapide. Furtif. Létal.                       \033[1;36m║\033[0m\n\"; \
+    printf \"\033[1;36m╠══════════════════════════════════════════════╣\033[0m\n\"; \
+    printf \"\033[1;36m║\033[0m  \033[1;34mup\033[0m          → Mettre à jour le système       \033[1;36m║\033[0m\n\"; \
+    printf \"\033[1;36m║\033[0m  \033[1;34msharkhelp\033[0m   → Toutes les commandes           \033[1;36m║\033[0m\n\"; \
+    printf \"\033[1;36m║\033[0m  \033[1;34msharkscan\033[0m   → Scanner un réseau              \033[1;36m║\033[0m\n\"; \
+    printf \"\033[1;36m╚══════════════════════════════════════════════╝\033[0m\n\"; \
+    echo; \
+    exec zsh\""'
 OnlyShowIn=XFCE;
-X-XFCE-Autostart-Delay=5
+X-XFCE-Autostart-Delay=3
 EOF
 
 # =============================================================================
