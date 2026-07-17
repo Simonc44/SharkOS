@@ -35,15 +35,40 @@ apt-get install -y --no-install-recommends \
   fonts-powerline \
   fonts-font-awesome
 
-# Créer l'utilisateur shark AVANT d'essayer de lui assigner un shell
+# =============================================================================
+# FIX : Création compte shark avec mot de passe garanti
+# =============================================================================
+
+# S'assurer que zsh existe avant de l'assigner
+ZSH_PATH="$(command -v zsh 2>/dev/null || echo /bin/bash)"
+
+# Créer l'utilisateur shark s'il n'existe pas
 if ! id "shark" &>/dev/null; then
-  useradd -m -s "$(command -v zsh)" -G sudo,audio,video,plugdev,netdev shark 2>/dev/null || \
-  useradd -m -s "$(command -v zsh)" shark 2>/dev/null || true
+  useradd -m -s "$ZSH_PATH" -G sudo,audio,video,plugdev,netdev shark 2>/dev/null || \
+  useradd -m -s "$ZSH_PATH" shark 2>/dev/null || true
 fi
 
-# Définir le mot de passe par défaut pour 'shark' et 'root' (shark)
+# Définir le mot de passe shark via chpasswd (méthode la plus fiable)
 echo "shark:shark" | chpasswd 2>/dev/null || true
+
+# Fallback : openssl shadow hash
+if ! su -s /bin/sh shark -c "echo ok" 2>/dev/null | grep -q ok; then
+  HASH=$(openssl passwd -6 "shark" 2>/dev/null || \
+         python3 -c "import crypt; print(crypt.crypt('shark', crypt.mksalt(crypt.METHOD_SHA512)))" 2>/dev/null || \
+         echo "")
+  [[ -n "$HASH" ]] && usermod -p "$HASH" shark 2>/dev/null || true
+fi
+
+# Root password aussi
 echo "root:shark" | chpasswd 2>/dev/null || true
+
+# Permettre le login root via LightDM (optionnel mais utile en live)
+sed -i 's/^#*allow-root=.*/allow-root=true/' /etc/lightdm/lightdm.conf 2>/dev/null || true
+
+# S'assurer que shark est dans sudoers
+if ! grep -q "^shark" /etc/sudoers 2>/dev/null; then
+  echo "shark ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+fi
 
 # Installation Oh My Zsh en mode non-interactif
 export RUNZSH=no
