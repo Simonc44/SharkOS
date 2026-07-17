@@ -94,6 +94,7 @@ cat > config/package-lists/sharkos.list.chroot << 'PACKAGES'
 xorg
 xfce4
 xfce4-goodies
+xfce4-session
 lightdm
 lightdm-gtk-greeter
 lightdm-gtk-greeter-settings

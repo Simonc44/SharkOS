@@ -293,27 +293,6 @@ flatpak remote-add --if-not-exists flathub \
   https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 
 # =============================================================================
-# 9. XUBUNTU DEFAULT SETTINGS
-# =============================================================================
-echo "[9/10] Xubuntu default settings..."
-
-if [[ ! -d "/tmp/xubuntu-default-settings" ]]; then
-  git clone --depth=1 \
-    https://github.com/Xubuntu/xubuntu-default-settings.git \
-    /tmp/xubuntu-default-settings 2>/dev/null || true
-fi
-
-if [[ -d "/tmp/xubuntu-default-settings" ]]; then
-  [[ -d "/tmp/xubuntu-default-settings/etc/xdg" ]] && \
-    cp -r /tmp/xubuntu-default-settings/etc/xdg/* /etc/xdg/ 2>/dev/null || true
-  [[ -d "/tmp/xubuntu-default-settings/usr/share" ]] && \
-    cp -r /tmp/xubuntu-default-settings/usr/share/* /usr/share/ 2>/dev/null || true
-  echo "   ✓ Xubuntu default settings appliqués"
-else
-  echo "   ⚠️  Xubuntu default settings non clonés (réseau indisponible ?)"
-fi
-
-# =============================================================================
 # 10. CONFIGURATION NEOFETCH SHARKOS
 # =============================================================================
 echo "[10/10] Neofetch SharkOS..."

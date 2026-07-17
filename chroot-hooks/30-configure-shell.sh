@@ -300,6 +300,9 @@ ff02::1     ip6-allnodes
 ff02::2     ip6-allrouters
 EOF
 
+# Forcer la session XFCE par défaut pour éviter les boucles de crash de session de LightDM
+update-alternatives --set x-session-manager /usr/bin/xfce4-session 2>/dev/null || true
+
 # Locale française
 cat > /etc/default/locale << 'EOF'
 LANG=fr_FR.UTF-8
