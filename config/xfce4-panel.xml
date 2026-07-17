@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  SharkOS — Configuration XFCE4 Panel
-  Barre du haut style macOS (menubar + clock + systray)
+  SharkOS — Panel Liquid Glass
+  Barre menubar transparente style visionOS
 -->
 <channel name="xfce4-panel" version="1.0">
   <property name="configver" type="int" value="2"/>
@@ -9,41 +9,24 @@
     <value type="int" value="1"/>
   </property>
 
-  <!-- ================================================================
-       PANEL 1 — Barre supérieure (style macOS menubar)
-  ================================================================ -->
   <property name="panel-1" type="empty">
-    <!-- Position : haut de l'écran -->
-    <property name="position" type="string" value="p=6;x=0;y=0"/>
-    <property name="position-locked" type="bool" value="true"/>
-
-    <!-- Longueur : 100% de la largeur écran -->
-    <property name="length" type="uint" value="100"/>
-    <property name="length-adjust" type="bool" value="true"/>
-
-    <!-- Hauteur de la barre (compact macOS) -->
-    <property name="size" type="uint" value="28"/>
-
-    <!-- Span sur tous les moniteurs -->
-    <property name="span-monitors" type="bool" value="false"/>
-
-    <!-- Fond semi-transparent -->
-    <property name="background-style" type="uint" value="2"/>
-    <property name="background-rgba" type="array">
-      <value type="double" value="0.1"/>
-      <value type="double" value="0.1"/>
-      <value type="double" value="0.1"/>
-      <value type="double" value="0.85"/>
+    <property name="position"          type="string" value="p=6;x=0;y=0"/>
+    <property name="position-locked"   type="bool"   value="true"/>
+    <property name="length"            type="uint"   value="100"/>
+    <property name="length-adjust"     type="bool"   value="true"/>
+    <property name="size"              type="uint"   value="30"/>
+    <property name="span-monitors"     type="bool"   value="false"/>
+    <!-- Liquid Glass : bleu nuit très transparent -->
+    <property name="background-style"  type="uint"   value="2"/>
+    <property name="background-rgba"   type="array">
+      <value type="double" value="0.06"/>
+      <value type="double" value="0.07"/>
+      <value type="double" value="0.14"/>
+      <value type="double" value="0.82"/>
     </property>
-
-    <!-- Masquage : jamais (toujours visible comme macOS) -->
-    <property name="autohide-behavior" type="uint" value="0"/>
-
-    <!-- Mode : taille fixe -->
-    <property name="mode" type="uint" value="0"/>
-
-    <!-- Plugins dans la barre -->
-    <property name="plugin-ids" type="array">
+    <property name="autohide-behavior" type="uint"   value="0"/>
+    <property name="mode"              type="uint"   value="0"/>
+    <property name="plugin-ids"        type="array">
       <value type="int" value="1"/>
       <value type="int" value="2"/>
       <value type="int" value="3"/>
@@ -51,64 +34,60 @@
       <value type="int" value="5"/>
       <value type="int" value="6"/>
       <value type="int" value="7"/>
+      <value type="int" value="8"/>
     </property>
   </property>
 
-  <!-- ================================================================
-       PLUGINS
-  ================================================================ -->
-
-  <!-- 1. Logo SharkOS (bouton application menu) -->
   <property name="plugins" type="empty">
+
     <property name="plugin-1" type="string" value="applicationsmenu">
-      <property name="show-button-title" type="bool" value="true"/>
-      <property name="button-title" type="string" value="🦈"/>
-      <property name="show-tooltip" type="bool" value="false"/>
-      <property name="show-generic-names" type="bool" value="false"/>
-      <property name="show-menu-icons" type="bool" value="true"/>
+      <property name="show-button-title"  type="bool"   value="true"/>
+      <property name="button-title"       type="string" value="🦈"/>
+      <property name="show-tooltip"       type="bool"   value="false"/>
+      <property name="show-generic-names" type="bool"   value="false"/>
+      <property name="show-menu-icons"    type="bool"   value="true"/>
     </property>
 
-    <!-- 2. Séparateur -->
     <property name="plugin-2" type="string" value="separator">
       <property name="expand" type="bool" value="false"/>
-      <property name="style" type="uint" value="0"/>
+      <property name="style"  type="uint" value="1"/>
     </property>
 
-    <!-- 3. Tâches ouvertes (liste des fenêtres) -->
     <property name="plugin-3" type="string" value="tasklist">
-      <property name="show-labels" type="bool" value="true"/>
-      <property name="show-only-minimized" type="bool" value="false"/>
+      <property name="show-labels"            type="bool" value="true"/>
+      <property name="show-only-minimized"    type="bool" value="false"/>
       <property name="include-all-workspaces" type="bool" value="false"/>
-      <property name="flat-buttons" type="bool" value="true"/>
-      <property name="show-wireframes" type="bool" value="false"/>
-      <property name="middle-click" type="uint" value="0"/>
-      <property name="grouping" type="uint" value="0"/>
+      <property name="flat-buttons"           type="bool" value="true"/>
+      <property name="grouping"               type="uint" value="1"/>
+      <property name="middle-click"           type="uint" value="0"/>
     </property>
 
-    <!-- 4. Séparateur extensible (pousse les éléments suivants à droite) -->
+    <!-- Séparateur extensible -->
     <property name="plugin-4" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
-      <property name="style" type="uint" value="0"/>
+      <property name="style"  type="uint" value="0"/>
     </property>
 
-    <!-- 5. Zone de notification système -->
     <property name="plugin-5" type="string" value="systray">
-      <property name="size-max" type="uint" value="22"/>
+      <property name="size-max"   type="uint" value="20"/>
       <property name="show-frame" type="bool" value="false"/>
     </property>
 
-    <!-- 6. Réseau + volume + batterie (indicateurs PulseAudio) -->
     <property name="plugin-6" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="show-notifications" type="bool" value="true"/>
+      <property name="show-notifications"        type="bool" value="true"/>
     </property>
 
-    <!-- 7. Horloge (format macOS : HH:MM Jour JJ Mois) -->
-    <property name="plugin-7" type="string" value="clock">
-      <property name="mode" type="uint" value="2"/>
-      <property name="digital-format" type="string" value="%H:%M  %a %d %b"/>
-      <property name="digital-font" type="string" value="SF Pro Display 10"/>
-      <property name="show-military" type="bool" value="true"/>
+    <property name="plugin-7" type="string" value="separator">
+      <property name="expand" type="bool" value="false"/>
+      <property name="style"  type="uint" value="1"/>
     </property>
+
+    <property name="plugin-8" type="string" value="clock">
+      <property name="mode"           type="uint"   value="2"/>
+      <property name="digital-format" type="string" value="  %H:%M  ·  %a %d %b  "/>
+      <property name="tooltip-format" type="string" value="%A %d %B %Y — %H:%M:%S"/>
+    </property>
+
   </property>
 </channel>
