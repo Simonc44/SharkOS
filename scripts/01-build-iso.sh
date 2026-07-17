@@ -65,7 +65,7 @@ lb config noauto \\
   --mirror-chroot-security "${DEBIAN_SECURITY}" \\
   --mirror-binary "${DEBIAN_MIRROR}" \\
   --mirror-binary-security "${DEBIAN_SECURITY}" \\
-  --bootappend-live "boot=live components quiet splash hostname=sharkos username=shark" \\
+  --bootappend-live "boot=live components quiet splash hostname=sharkos username=shark user-password=shark" \\
   --iso-application "SharkOS" \\
   --iso-preparer "SharkOS Build System v3.0" \\
   --iso-publisher "SharkOS Project" \\
