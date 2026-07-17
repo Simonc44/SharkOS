@@ -98,6 +98,8 @@ lightdm
 lightdm-gtk-greeter
 lightdm-gtk-greeter-settings
 slick-greeter
+calamares
+calamares-settings-debian
 
 # === Dock ===
 plank
@@ -316,6 +318,12 @@ chmod +x "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-autostart-setu
 mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel/.config/autostart"
 cp "$SHARK_DIR/config/sharkos-setup-wizard.desktop" \
    "$BUILD_DIR/config/includes.chroot/etc/skel/.config/autostart/sharkos-setup-wizard.desktop"
+
+# Copie du raccourci sur le bureau pour installer SharkOS sur le PC
+mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel/Desktop"
+cp "$SHARK_DIR/config/install-sharkos.desktop" \
+   "$BUILD_DIR/config/includes.chroot/etc/skel/Desktop/install-sharkos.desktop"
+chmod +x "$BUILD_DIR/config/includes.chroot/etc/skel/Desktop/install-sharkos.desktop"
 
 # =============================================================================
 # LANCEMENT DE LA BUILD

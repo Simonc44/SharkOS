@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Installer SharkOS
+Name[fr]=Installer SharkOS
+Comment=Installer graphiquement SharkOS sur ton ordinateur
+Comment[en]=Graphically install SharkOS on your computer
+Exec=sudo calamares
+Icon=system-software-install
+Terminal=false
+Categories=System;UniversalAccess;
+Path=/tmp
+StartupNotify=true
