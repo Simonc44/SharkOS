@@ -104,7 +104,7 @@ apt-get install -y --no-install-recommends \
 
 # Tenter slick-greeter en bonus (pas bloquant)
 apt-get install -y --no-install-recommends \
-  slick-greeter 2>/dev/null || SLICK_ABSENT=true
+  slick-greeter 2>/dev/null || true
 
 # Choisir le greeter disponible
 if command -v /usr/sbin/slick-greeter &>/dev/null || \
