@@ -4,7 +4,7 @@
 
   <!-- Badges -->
   <a href="https://github.com/Simonc44/SharkOS/releases/latest">
-  <img src="https://img.shields.io/badge/Dernier_ISO-v1.0-007ec6?style=for-the-badge" alt="Dernier ISO généré">
+  <img src="https://img.shields.io/badge/Dernier_ISO-v1.0.0-007ec6?style=for-the-badge" alt="Dernier ISO généré">
 </a>
   <img src="https://img.shields.io/badge/Base-Debian_12_Bookworm-A80030?style=for-the-badge&logo=debian" alt="Base Debian">
   <img src="https://img.shields.io/badge/Desktop-XFCE_4-2284F2?style=for-the-badge&logo=xfce" alt="Desktop XFCE">
