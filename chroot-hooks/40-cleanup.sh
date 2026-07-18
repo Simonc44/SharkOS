@@ -201,4 +201,38 @@ echo "   Nettoyage SharkOS terminé !"
 echo "   Taille système actuelle : $DISK_USAGE"
 echo "   Paquets restants : $(dpkg -l | grep -c '^ii')"
 echo "============================================ 🦈"
+# =============================================================================
+# VÉRIFICATION FINALE — login shark/shark
+# =============================================================================
+echo "[FINAL] Vérification compte shark..."
+
+# Re-forcer le mot de passe une dernière fois après tout le reste
+echo "shark:shark" | chpasswd 2>/dev/null || true
+echo "root:shark"  | chpasswd 2>/dev/null || true
+
+# Vérifier que /etc/shadow contient bien shark
+if grep -q "^shark:\*" /etc/shadow 2>/dev/null || \
+   grep -q "^shark:!" /etc/shadow 2>/dev/null; then
+  echo "   ⚠ ATTENTION : compte shark verrouillé dans /etc/shadow !"
+  # Forcer le déverrouillage
+  usermod -U shark 2>/dev/null || true
+  HASH=$(openssl passwd -6 -salt "SharkOS01" "shark")
+  sed -i "s|^shark:[^:]*:|shark:${HASH}:|" /etc/shadow
+  echo "   ✓ Compte déverrouillé."
+else
+  echo "   ✓ Compte shark OK"
+fi
+
+# Vérifier sudoers
+grep -q "shark" /etc/sudoers || echo "shark ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# S'assurer que LightDM est bien installé
+dpkg -l lightdm 2>/dev/null | grep -q "^ii" && echo "   ✓ LightDM installé" || \
+  echo "   ⚠ LightDM manquant !"
+
+# Lister les sessions disponibles pour LightDM
+echo "   Sessions disponibles :"
+ls /usr/share/xsessions/ 2>/dev/null | sed 's/^/     - /'
+
+echo "   ✅ Vérification terminée."
 echo ""
