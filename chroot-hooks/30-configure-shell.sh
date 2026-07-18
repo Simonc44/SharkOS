@@ -357,6 +357,8 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" << 'EOF'
     </property>
   </property>
   <property name="plugins" type="empty">
+
+    <!-- 🦈 SharkOS menu principal -->
     <property name="plugin-1" type="string" value="applicationsmenu">
       <property name="show-button-title"  type="bool"   value="true"/>
       <property name="button-title"       type="string" value="🦈 SharkOS"/>
@@ -394,6 +396,7 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" << 'EOF'
       <property name="digital-format" type="string" value="%a %b %d  %H:%M"/>
       <property name="tooltip-format" type="string" value="%A %d %B %Y — %H:%M:%S"/>
     </property>
+
   </property>
 </channel>
 EOF
@@ -612,6 +615,7 @@ TERMRC
 # =============================================================================
 echo "[7/7] Autostart + identité système..."
 
+# Plank
 cat > "$SKEL/.config/autostart/plank.desktop" << 'EOF'
 [Desktop Entry]
 Type=Application
