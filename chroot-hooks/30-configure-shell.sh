@@ -274,35 +274,17 @@ GTKGREETER_CSS
 # Config GTK Greeter — style référence image 1
 cat > /etc/lightdm/lightdm-gtk-greeter.conf << EOF
 [greeter]
-# Thème de base
 theme-name = WhiteSur-Dark
 icon-theme-name = WhiteSur
 cursor-theme-name = WhiteSur-cursors
 cursor-theme-size = 24
-
-# Fond étoilé
 background = ${WALLPAPER_PATH}
 user-background = false
-
-# Police
 font-name = Helvetica Neue 11
-
-# Horloge style référence
 clock-format = %H:%M
-
-# Barre indicateurs (comme image 1 : wifi, son, langue, heure, power)
 indicators = ~host;~spacer;~language;~spacer;~a11y;~clock;~power
-
-# Positionnement centré (comme image 1)
 position = 50%,center 50%,center
-
-# Titre français
-# (lightdm-gtk-greeter affiche le username automatiquement)
-
-# Pas de liste d'utilisateurs — juste les champs
 hide-user-image = false
-
-# Forcer les labels en français
 EOF
 
 # Ajouter le logo si disponible
@@ -336,8 +318,6 @@ systemctl set-default graphical.target 2>/dev/null || true
 
 # =============================================================================
 # 2. PANEL XFCE — menubar style image 3
-#    "🦈 SharkOS  Arsenal  System  Réseau  Aide" à gauche
-#    Wifi + batterie + heure à droite
 # =============================================================================
 echo "[2/7] Panel XFCE style macOS menubar..."
 
@@ -386,8 +366,6 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" << 'EOF'
       <property name="show-generic-names" type="bool"   value="false"/>
       <property name="show-menu-icons"    type="bool"   value="true"/>
     </property>
-
-    <!-- Tasklist fenêtres ouvertes -->
     <property name="plugin-2" type="string" value="tasklist">
       <property name="flat-buttons"           type="bool" value="true"/>
       <property name="show-labels"            type="bool" value="true"/>
@@ -395,38 +373,24 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" << 'EOF'
       <property name="include-all-workspaces" type="bool" value="false"/>
       <property name="grouping"               type="uint" value="1"/>
     </property>
-
-    <!-- Séparateur extensible -->
     <property name="plugin-3" type="string" value="separator">
       <property name="expand" type="bool" value="true"/>
       <property name="style"  type="uint" value="0"/>
     </property>
-
-    <!-- Systray -->
     <property name="plugin-4" type="string" value="systray">
       <property name="size-max"   type="uint" value="20"/>
       <property name="show-frame" type="bool" value="false"/>
     </property>
-
-    <!-- Réseau (NetworkManager) -->
     <property name="plugin-5" type="string" value="nm-applet"/>
-
-    <!-- Volume -->
     <property name="plugin-6" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
       <property name="show-notifications"        type="bool" value="true"/>
     </property>
-
-    <!-- Batterie -->
     <property name="plugin-7" type="string" value="power-manager-plugin"/>
-
-    <!-- Séparateur fin -->
     <property name="plugin-8" type="string" value="separator">
       <property name="expand" type="bool" value="false"/>
       <property name="style"  type="uint" value="1"/>
     </property>
-
-    <!-- Horloge style image 3 : Fri Jul 17  17:00 -->
     <property name="plugin-9" type="string" value="clock">
       <property name="mode"           type="uint"   value="2"/>
       <property name="digital-format" type="string" value="%a %b %d  %H:%M"/>
@@ -438,7 +402,7 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" << 'EOF'
 EOF
 
 # =============================================================================
-# 3. XFWM4 + XSETTINGS — Thème + coins arrondis + boutons macOS
+# 3. XFWM4 + XSETTINGS
 # =============================================================================
 echo "[3/7] Gestionnaire de fenêtres..."
 
@@ -448,7 +412,6 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" << 'EOF'
   <property name="general" type="empty">
     <property name="theme"             type="string" value="WhiteSur-Dark"/>
     <property name="title_font"        type="string" value="Helvetica Neue Bold 11"/>
-    <!-- Boutons style macOS : fermer, minifier, max à gauche -->
     <property name="button_layout"     type="string" value="CMH|O"/>
     <property name="show_dock_shadow"  type="bool"   value="false"/>
     <property name="show_frame_shadow" type="bool"   value="true"/>
@@ -485,13 +448,12 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml" << 'EOF'
 EOF
 
 # =============================================================================
-# 4. PLANK DOCK — Style image 3 (Nmap, Wireshark, Metasploit, etc.)
+# 4. PLANK DOCK
 # =============================================================================
-echo "[4/7] Plank Dock style image 3..."
+echo "[4/7] Plank Dock..."
 
 mkdir -p "$SKEL/.config/plank/dock1/launchers"
 
-# Thème Plank custom — glass transparent comme image 3
 mkdir -p /usr/share/plank/themes/SharkOS
 cat > /usr/share/plank/themes/SharkOS/dock.theme << 'PLANKTHEME'
 [PlankTheme]
@@ -521,7 +483,6 @@ Monitor=
 LockItems=false
 EOF
 
-# Créer les dockitems — même apps que l'image 3
 create_dockitem() {
   local ITEM_NAME="$1"; shift
   local CANDIDATES=("$@")
@@ -535,31 +496,27 @@ create_dockitem() {
       fi
     done
   done
-  # Créer un placeholder pour les apps qui seront installées après
   echo "   ⚠ $ITEM_NAME (sera disponible après installation)"
 }
 
-# Même ordre que l'image 3 : Nmap, Wireshark, Metasploit, Aircrack-ng, VSCode, Spotify, Discord, Terminal
-create_dockitem "nmap"        "nmap.desktop" "zenmap.desktop"
-create_dockitem "wireshark"   "wireshark.desktop" "org.wireshark.Wireshark.desktop"
-create_dockitem "metasploit"  "msf.desktop" "metasploit-framework.desktop"
-create_dockitem "aircrack"    "aircrack-ng.desktop"
-create_dockitem "vscode"      "code.desktop" "code-oss.desktop" "visual-studio-code.desktop"
-create_dockitem "spotify"     "spotify.desktop" "com.spotify.Client.desktop"
-create_dockitem "discord"     "discord.desktop" "com.discordapp.Discord.desktop"
-create_dockitem "terminal"    "xfce4-terminal.desktop" "xterm.desktop"
-create_dockitem "thunar"      "thunar.desktop"
+create_dockitem "nmap"       "nmap.desktop" "zenmap.desktop"
+create_dockitem "wireshark"  "wireshark.desktop" "org.wireshark.Wireshark.desktop"
+create_dockitem "metasploit" "msf.desktop" "metasploit-framework.desktop"
+create_dockitem "aircrack"   "aircrack-ng.desktop"
+create_dockitem "vscode"     "code.desktop" "code-oss.desktop" "visual-studio-code.desktop"
+create_dockitem "spotify"    "spotify.desktop" "com.spotify.Client.desktop"
+create_dockitem "discord"    "discord.desktop" "com.discordapp.Discord.desktop"
+create_dockitem "terminal"   "xfce4-terminal.desktop" "xterm.desktop"
+create_dockitem "thunar"     "thunar.desktop"
 
 # =============================================================================
-# 5. FOND D'ÉCRAN — Fond étoilé comme images de référence
+# 5. FOND D'ÉCRAN
 # =============================================================================
 echo "[5/7] Fond d'écran étoilé..."
 
-# Générer un fond étoilé avec ImageMagick si le wallpaper n'existe pas encore
 if ! [[ -f /usr/share/backgrounds/sharkos/sharkos.png ]]; then
   apt-get install -y --no-install-recommends imagemagick 2>/dev/null || true
   if command -v convert &>/dev/null; then
-    # Fond noir profond + bruit d'étoiles + halo teal (comme les images)
     convert -size 1920x1080 xc:'#050810' \
       -seed 42 \
       +noise Random \
@@ -568,12 +525,10 @@ if ! [[ -f /usr/share/backgrounds/sharkos/sharkos.png ]]; then
       -evaluate multiply 0.8 \
       /tmp/stars.png 2>/dev/null || true
 
-    # Halo teal en bas à gauche (comme image 1 et 3)
     convert -size 1920x1080 radial-gradient:'rgba(0,140,120,0.25)-rgba(0,0,0,0)' \
       -gravity SouthWest -geometry +0+0 \
       /tmp/halo.png 2>/dev/null || true
 
-    # Combiner
     convert /tmp/stars.png \
       \( /tmp/halo.png \) -compose Screen -composite \
       /usr/share/backgrounds/sharkos/sharkos.png 2>/dev/null || \
@@ -585,14 +540,12 @@ if ! [[ -f /usr/share/backgrounds/sharkos/sharkos.png ]]; then
   fi
 fi
 
-# Copier le wallpaper depuis les assets SharkOS si dispo
 for SRC in \
   /usr/share/sharkos/wallpaper.png \
   /usr/share/sharkos/wallpapers/wallpaper.png; do
   [[ -f "$SRC" ]] && cp "$SRC" /usr/share/backgrounds/sharkos/sharkos.png && break
 done
 
-# Config desktop XFCE4
 mkdir -p "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml"
 cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml" << 'XFDESKTOP'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -617,7 +570,6 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml" << 'XFD
       </property>
     </property>
   </property>
-  <!-- Bureau épuré : pas d'icônes, comme image 3 -->
   <property name="desktop-icons" type="empty">
     <property name="style" type="int" value="0"/>
   </property>
@@ -625,9 +577,9 @@ cat > "$SKEL/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml" << 'XFD
 XFDESKTOP
 
 # =============================================================================
-# 6. TERMINAL XFCE — Style image 3 (fond noir transparent, texte vert)
+# 6. TERMINAL XFCE
 # =============================================================================
-echo "[6/7] Terminal style image 3..."
+echo "[6/7] Terminal..."
 
 mkdir -p "$SKEL/.config/xfce4/terminal"
 cat > "$SKEL/.config/xfce4/terminal/terminalrc" << 'TERMRC'
@@ -673,7 +625,6 @@ OnlyShowIn=XFCE;
 X-XFCE-Autostart-Override=true
 EOF
 
-# Picom (compositor — glass & blur)
 apt-get install -y --no-install-recommends picom 2>/dev/null || true
 cat > "$SKEL/.config/autostart/picom.desktop" << 'EOF'
 [Desktop Entry]
@@ -725,7 +676,6 @@ vsync = true;
 use-damage = true;
 PICOM
 
-# Identité système
 cat > /etc/os-release << 'EOF'
 NAME="SharkOS"
 VERSION="1.0 (Hammerhead)"

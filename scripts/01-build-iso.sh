@@ -65,7 +65,7 @@ lb config noauto \\
   --mirror-chroot-security "${DEBIAN_SECURITY}" \\
   --mirror-binary "${DEBIAN_MIRROR}" \\
   --mirror-binary-security "${DEBIAN_SECURITY}" \\
-  --bootappend-live "boot=live components quiet splash hostname=sharkos username=shark" \\
+  --bootappend-live "boot=live components quiet splash hostname=sharkos username=shark user-password=shark" \\
   --iso-application "SharkOS" \\
   --iso-preparer "SharkOS Build System v3.0" \\
   --iso-publisher "SharkOS Project" \\
@@ -94,10 +94,13 @@ cat > config/package-lists/sharkos.list.chroot << 'PACKAGES'
 xorg
 xfce4
 xfce4-goodies
+xfce4-session
 lightdm
 lightdm-gtk-greeter
 lightdm-gtk-greeter-settings
 slick-greeter
+calamares
+calamares-settings-debian
 
 # === Dock ===
 plank
@@ -188,7 +191,7 @@ python3
 python3-gi
 gir1.2-gtk-3.0
 gamemode
-libgamemode-dev
+gamemode-dev
 PACKAGES
 
 # =============================================================================
@@ -197,6 +200,35 @@ PACKAGES
 echo "[PRÉ-BUILD] Copie des assets PNG..."
 mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/sharkos"
 mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos"
+
+# =============================================================================
+# TÉLÉCHARGEMENT PROTON-GE (CÔTÉ HÔTE)
+# =============================================================================
+echo "[PRÉ-BUILD] Téléchargement et préparation de Proton-GE..."
+GE_HOST_DIR="$BUILD_DIR/config/includes.chroot/etc/skel/.steam/root/compatibilitytools.d"
+mkdir -p "$GE_HOST_DIR"
+
+GE_URL=""
+if command -v curl &>/dev/null && command -v grep &>/dev/null; then
+  # Timeout rapide de 8s pour l'API GitHub
+  GE_URL=$(curl --connect-timeout 8 --max-time 15 -s https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest | grep "browser_download_url.*GE-Proton.*\.tar\.gz" | head -n 1 | cut -d : -f 2,3 | tr -d ' "') || true
+fi
+
+# Fallback statique si API rate limit ou pas de connexion
+if [[ -z "${GE_URL:-}" ]]; then
+  echo "   ⚠️  Impossible de contacter l'API GitHub — Utilisation du fallback..."
+  GE_URL="https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton9-10/GE-Proton9-10.tar.gz"
+fi
+
+echo "   ✓ Téléchargement de Proton-GE : $GE_URL"
+if wget --connect-timeout=8 --timeout=15 -q "$GE_URL" -O /tmp/proton-ge.tar.gz; then
+  echo "   ✓ Extraction de Proton-GE..."
+  tar -xzf /tmp/proton-ge.tar.gz -C "$GE_HOST_DIR/"
+  rm -f /tmp/proton-ge.tar.gz
+  echo "   ✓ Proton-GE préparé avec succès"
+else
+  echo "   ⚠️  Téléchargement Proton-GE échoué (réseau non disponible lors du build) — pourra être installé plus tard"
+fi
 
 WALLPAPER_SRC=""
 if [[ -f "$SHARK_DIR/wallpapers/sharkos-wall.png" ]]; then
@@ -287,6 +319,12 @@ chmod +x "$BUILD_DIR/config/includes.chroot/usr/local/bin/sharkos-autostart-setu
 mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel/.config/autostart"
 cp "$SHARK_DIR/config/sharkos-setup-wizard.desktop" \
    "$BUILD_DIR/config/includes.chroot/etc/skel/.config/autostart/sharkos-setup-wizard.desktop"
+
+# Copie du raccourci sur le bureau pour installer SharkOS sur le PC
+mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel/Desktop"
+cp "$SHARK_DIR/config/install-sharkos.desktop" \
+   "$BUILD_DIR/config/includes.chroot/etc/skel/Desktop/install-sharkos.desktop"
+chmod +x "$BUILD_DIR/config/includes.chroot/etc/skel/Desktop/install-sharkos.desktop"
 
 # =============================================================================
 # LANCEMENT DE LA BUILD
