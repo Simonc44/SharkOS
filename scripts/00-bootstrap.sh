@@ -1,170 +1,174 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SharkOS — 00-bootstrap.sh (v2 — corrigé)
-# Prépare l'environnement live-build sur un hôte Debian/Ubuntu
-# FIXES : copie logo.png, suppression ref SVG, chemins robustes
+# SharkOS — 00-bootstrap.sh v3.0 (Garuda-style)
+# Prépare l'environnement live-build avec config Garuda-inspirée
 # =============================================================================
 set -euo pipefail
 
-SHARK_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD_DIR="$SHARK_DIR/iso-build"
-
 echo ""
-echo "🦈 ============================================"
-echo "   SharkOS — Bootstrap de l'environnement"
-echo "============================================ 🦈"
+echo "🦈 SharkOS Bootstrap — Dragon Edition (Garuda-style)"
+echo "======================================================"
 echo ""
 
-# --- Vérification des droits root ---
-if [[ $EUID -ne 0 ]]; then
-  echo "[ERREUR] Ce script doit être exécuté en root."
-  echo "         Utilise : sudo bash scripts/00-bootstrap.sh"
-  exit 1
-fi
-
-# --- Mise à jour du système hôte ---
-echo "[1/5] Mise à jour du système hôte..."
-apt-get update -qq
-apt-get upgrade -y -qq
-
-# --- Installation des dépendances live-build ---
-echo "[2/5] Installation de live-build et outils ISO..."
-apt-get install -y -qq \
+# =============================================================================
+# 1. DÉPENDANCES HOST
+# =============================================================================
+echo "[1/6] Dépendances build..."
+sudo apt-get update -qq
+sudo apt-get install -y --no-install-recommends \
   live-build \
   squashfs-tools \
   xorriso \
   isolinux \
   syslinux-utils \
-  syslinux-common \
-  genisoimage \
-  git \
-  curl \
-  wget \
-  ca-certificates \
-  debootstrap \
+  git curl wget \
+  python3 python3-pip \
   rsync \
-  dconf-cli \
-  imagemagick \
-  file
+  zstd \
+  imagemagick
 
-# --- Vérification que les wallpapers PNG existent ---
-echo "[3/5] Vérification des assets PNG..."
-WARN=0
+# =============================================================================
+# 2. RÉPERTOIRE LIVE-BUILD
+# =============================================================================
+echo "[2/6] Répertoire live-build..."
+LB_DIR="$(dirname "$0")/../iso-build"
+cd "$LB_DIR"
 
-# Déterminer les vrais assets
-WALLPAPER_SRC=""
-if [[ -f "$SHARK_DIR/wallpapers/sharkos-wall.png" ]]; then
-  WALLPAPER_SRC="$SHARK_DIR/wallpapers/sharkos-wall.png"
-elif [[ -f "$SHARK_DIR/wallpapers/wallpaper.png" ]]; then
-  WALLPAPER_SRC="$SHARK_DIR/wallpapers/wallpaper.png"
-fi
+lb clean 2>/dev/null || true
 
-LOGO_SRC=""
-if [[ -f "$SHARK_DIR/wallpapers/sharkos-logo.png" ]]; then
-  LOGO_SRC="$SHARK_DIR/wallpapers/sharkos-logo.png"
-elif [[ -f "$SHARK_DIR/wallpapers/logo.png" ]]; then
-  LOGO_SRC="$SHARK_DIR/wallpapers/logo.png"
-fi
+# =============================================================================
+# 3. CONFIG LIVE-BUILD (Garuda-inspired : zstd, firmware, non-free)
+# =============================================================================
+echo "[3/6] Config live-build Garuda-style..."
+lb config \
+  --architectures amd64 \
+  --distribution bookworm \
+  --archive-areas "main contrib non-free non-free-firmware" \
+  --apt-recommends false \
+  --binary-images iso-hybrid \
+  --bootappend-live "boot=live components quiet splash locales=fr_FR.UTF-8 keyboard-layouts=fr" \
+  --compression zstd \
+  --debootstrap-options "--include=ca-certificates" \
+  --firmware-binary true \
+  --firmware-chroot true \
+  --image-name "SharkOS-Dragon" \
+  --iso-application "SharkOS Dragon Edition" \
+  --iso-publisher "SharkOS Project" \
+  --iso-volume "SHARKOS_DRAGON" \
+  --memtest none \
+  --win32-loader false \
+  2>&1 | tail -5
 
-if [[ -n "$WALLPAPER_SRC" ]]; then
-  echo "   ✅ Wallpaper trouvé : $(basename "$WALLPAPER_SRC")"
-  MIME=$(file --mime-type -b "$WALLPAPER_SRC")
-  if [[ "$MIME" != "image/png" ]]; then
-    echo "   ❌ $WALLPAPER_SRC n'est pas un PNG valide (détecté : $MIME)"
-    exit 1
+# =============================================================================
+# 4. PAQUETS DESKTOP (KDE Plasma ou XFCE selon dispo)
+# =============================================================================
+echo "[4/6] Liste de paquets..."
+mkdir -p config/package-lists
+
+cat > config/package-lists/sharkos-desktop.list.chroot << 'PKGLIST'
+# ── Desktop XFCE (base fiable Debian) ─────────────────────────────
+xfce4
+xfce4-goodies
+xfce4-terminal
+thunar
+thunar-archive-plugin
+thunar-volman
+gvfs
+gvfs-backends
+network-manager
+network-manager-gnome
+plank
+lightdm
+lightdm-gtk-greeter
+lightdm-gtk-greeter-settings
+pulseaudio
+pulseaudio-utils
+pavucontrol
+
+# ── Polices ────────────────────────────────────────────────────────
+fonts-noto
+fonts-noto-color-emoji
+fonts-liberation
+ttf-mscorefonts-installer
+
+# ── Apps de base ──────────────────────────────────────────────────
+firefox-esr
+thunderbird
+gimp
+vlc
+libreoffice
+geany
+mousepad
+arcade-manager
+file-roller
+
+# ── Terminal & Shell ──────────────────────────────────────────────
+zsh
+bash
+git
+
+# ── Bluetooth ─────────────────────────────────────────────────────
+bluez
+blueman
+
+# ── Firmware & drivers ────────────────────────────────────────────
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+amd64-microcode
+intel-microcode
+
+# ── Calamares (installateur graphique — comme Garuda) ─────────────
+# calamares
+PKGLIST
+
+# =============================================================================
+# 5. HOOKS CHROOT
+# =============================================================================
+echo "[5/6] Hooks chroot..."
+ROOT_DIR="$(dirname "$0")/.."
+mkdir -p config/hooks/live
+
+for HOOK in \
+  "$ROOT_DIR/chroot-hooks/10-install-tools.sh" \
+  "$ROOT_DIR/chroot-hooks/20-apply-theme.sh" \
+  "$ROOT_DIR/chroot-hooks/30-configure-shell.sh" \
+  "$ROOT_DIR/chroot-hooks/40-cleanup.sh"; do
+  if [[ -f "$HOOK" ]]; then
+    DEST="config/hooks/live/$(basename $HOOK .sh).hook.chroot"
+    cp "$HOOK" "$DEST"
+    chmod +x "$DEST"
+    echo "   ✓ $(basename $HOOK)"
   fi
-else
-  echo "   ⚠️  Wallpaper absent — il sera généré automatiquement"
-  WARN=$((WARN + 1))
-fi
-
-if [[ -n "$LOGO_SRC" ]]; then
-  echo "   ✅ Logo trouvé : $(basename "$LOGO_SRC")"
-  MIME=$(file --mime-type -b "$LOGO_SRC")
-  if [[ "$MIME" != "image/png" ]]; then
-    echo "   ❌ $LOGO_SRC n'est pas un PNG valide (détecté : $MIME)"
-    exit 1
-  fi
-else
-  echo "   ⚠️  Logo absent — il sera généré automatiquement"
-  WARN=$((WARN + 1))
-fi
-
-# Refuser tout SVG dans wallpapers/
-if find "$SHARK_DIR/wallpapers/" -name "*.svg" 2>/dev/null | grep -q "."; then
-  echo "   ❌ Des fichiers .svg sont présents dans wallpapers/ — SharkOS n'utilise que des PNG !"
-  find "$SHARK_DIR/wallpapers/" -name "*.svg"
-  exit 1
-fi
-
-# --- Création de la structure iso-build et copie des hooks ---
-echo "[4/5] Création de la structure iso-build et copie des hooks chroot..."
-mkdir -p "$BUILD_DIR/auto"
-mkdir -p "$BUILD_DIR/config/hooks/live"
-mkdir -p "$BUILD_DIR/config/includes.chroot/etc/skel"
-mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/sharkos"
-mkdir -p "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos"
-mkdir -p "$BUILD_DIR/config/package-lists"
-
-for HOOK in "$SHARK_DIR/chroot-hooks"/*.sh; do
-  HOOK_NAME=$(basename "$HOOK")
-  cp "$HOOK" "$BUILD_DIR/config/hooks/live/$HOOK_NAME"
-  chmod +x "$BUILD_DIR/config/hooks/live/$HOOK_NAME"
-  echo "   ✓ $HOOK_NAME"
 done
 
-# --- Copie des fichiers de config et assets PNG ---
-echo "[5/5] Copie des fichiers de config et assets..."
+# =============================================================================
+# 6. ASSETS (wallpaper)
+# =============================================================================
+echo "[6/6] Assets..."
+mkdir -p config/includes.chroot/usr/share/sharkos
 
-# .zshrc
-cp "$SHARK_DIR/config/.zshrc" \
-   "$BUILD_DIR/config/includes.chroot/etc/skel/.zshrc"
-echo "   ✓ .zshrc"
-
-# plank.dconf
-cp "$SHARK_DIR/config/plank.dconf" \
-   "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/plank.dconf"
-echo "   ✓ plank.dconf"
-
-# wallpaper.png (PNG obligatoire — génère si absent)
-if [[ -n "$WALLPAPER_SRC" ]]; then
-  cp "$WALLPAPER_SRC" \
-     "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png"
-  cp "$WALLPAPER_SRC" \
-     "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos/sharkos.png"
-  echo "   ✓ wallpaper.png"
-else
-  echo "   ⚙️  Génération du wallpaper PNG de remplacement..."
-  convert \
-    -size 1920x1080 xc:'#0a0a0f' \
-    -font DejaVu-Sans-Bold \
-    -pointsize 80 -fill '#1a8cff' -gravity center \
-    -annotate +0-40 'SharkOS' \
-    -pointsize 22 -fill '#4a9eff' \
-    -annotate +0+60 'Rapide. Furtif. Létal.' \
-    "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png" 2>/dev/null || true
-  cp "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/wallpaper.png" \
-     "$BUILD_DIR/config/includes.chroot/usr/share/backgrounds/sharkos/sharkos.png" 2>/dev/null || true
-  echo "   ✓ wallpaper.png généré"
-fi
-
-# logo.png (PNG — génère si absent)
-if [[ -n "$LOGO_SRC" ]]; then
-  cp "$LOGO_SRC" \
-     "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/logo.png"
-  echo "   ✓ logo.png"
-else
-  echo "   ⚙️  Génération du logo PNG de remplacement..."
-  convert \
-    -size 512x512 xc:'#0a0a0f' \
-    -font DejaVu-Sans-Bold \
-    -pointsize 200 -fill '#1a8cff' -gravity center \
-    -annotate +0+0 'S' \
-    "$BUILD_DIR/config/includes.chroot/usr/share/sharkos/logo.png" 2>/dev/null || true
-  echo "   ✓ logo.png généré"
+if [[ -f "$ROOT_DIR/wallpapers/sharkos-wall.svg" ]]; then
+  # Convertir SVG → PNG
+  command -v rsvg-convert &>/dev/null && \
+    rsvg-convert -W 1920 -H 1080 \
+      "$ROOT_DIR/wallpapers/sharkos-wall.svg" \
+      -o config/includes.chroot/usr/share/sharkos/wallpaper.png 2>/dev/null || \
+  command -v convert &>/dev/null && \
+    convert -background '#0d0221' \
+      "$ROOT_DIR/wallpapers/sharkos-wall.svg" \
+      -resize 1920x1080 \
+      config/includes.chroot/usr/share/sharkos/wallpaper.png 2>/dev/null || \
+  echo "   ⚠ SVG non convertible — le hook génèrera un fond de secours"
+elif [[ -f "$ROOT_DIR/wallpapers/sharkos-wall.png" ]]; then
+  cp "$ROOT_DIR/wallpapers/sharkos-wall.png" \
+     config/includes.chroot/usr/share/sharkos/wallpaper.png
 fi
 
 echo ""
-echo "✅ Bootstrap terminé avec succès !"
-echo "   Lance maintenant : sudo bash scripts/01-build-iso.sh"
+echo "✅ Bootstrap terminé ! Lance ensuite :"
+echo "   sudo bash scripts/01-build-iso.sh"
 echo ""

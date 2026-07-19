@@ -1,0 +1,37 @@
+# =============================================================================
+# SharkOS Dragon Edition — Packages inspirés Garuda Linux
+# Ce fichier documente les packages clés et leur équivalent Garuda
+# =============================================================================
+
+# KERNEL & PERFORMANCE
+# Garuda : linux-zen         → SharkOS : linux-image-liquorix-amd64
+# Garuda : zram-generator    → SharkOS : zram-tools + sharkos-zram.service
+# Garuda : ananicy-cpp       → SharkOS : ananicy (Debian)
+# Garuda : nohang            → SharkOS : nohang
+# Garuda : irqbalance        → SharkOS : irqbalance
+# Garuda : thermald          → SharkOS : thermald
+
+# DESKTOP
+# Garuda Dr460nized : KDE Plasma + Latte-dock
+# SharkOS           : XFCE4 + Plank (style dock glassmorphism)
+# Garuda : kvantum-qt5       → SharkOS : qt5-style-kvantum
+# Garuda : Dracula/Catppuccin → SharkOS : GTK Dracula + Papirus-Dark
+# Garuda : picom (blur)      → SharkOS : picom dual_kawase blur
+
+# SHELL
+# Garuda : fish + starship   → SharkOS : zsh + powerlevel10k
+# Garuda : bat, eza, fd, rg  → SharkOS : bat, eza, fd-find, ripgrep
+
+# GAMING
+# Garuda : wine + lutris + gamemode + mangohud
+# SharkOS : wine + lutris + gamemode + mangohud (identique)
+
+# SECURITE
+# SharkOS EXTRA vs Garuda :
+#   nmap, wireshark, aircrack-ng, john, hydra, sqlmap,
+#   nikto, gobuster, hashcat, binwalk, volatility3
+
+# FILESYSTEM
+# Garuda : Btrfs + snapper + snap-pac (rolling auto-snapshots)
+# SharkOS : btrfs-progs + snapper + sharkos-snapshot script
+# Note : le système live utilise SquashFS, snapper s'active si installé sur HDD

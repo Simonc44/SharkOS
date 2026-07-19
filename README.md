@@ -1,25 +1,51 @@
 <div align="center">
-  <h1>🦈 SharkOS</h1>
-  <p><b>Le système ultime : design Apple, ergonomie Windows, arsenal Kali.</b></p>
+  <h1>🦈 SharkOS — Dragon Edition</h1>
+  <p><b>Performance Garuda. Arsenal Kali. Élégance Dark.</b></p>
 
-  <!-- Badges -->
   <a href="https://github.com/Simonc44/SharkOS/releases/latest">
-  <img src="https://img.shields.io/badge/Dernier_ISO-v1.0.0-007ec6?style=for-the-badge" alt="Dernier ISO généré">
-</a>
-  <img src="https://img.shields.io/badge/Base-Debian_12_Bookworm-A80030?style=for-the-badge&logo=debian" alt="Base Debian">
-  <img src="https://img.shields.io/badge/Desktop-XFCE_4-2284F2?style=for-the-badge&logo=xfce" alt="Desktop XFCE">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License MIT">
+    <img src="https://img.shields.io/badge/Version-2.0_Dragon-e94560?style=for-the-badge" alt="Version">
+  </a>
+  <img src="https://img.shields.io/badge/Base-Debian_12_Bookworm-A80030?style=for-the-badge&logo=debian">
+  <img src="https://img.shields.io/badge/Kernel-Liquorix_(gaming)-7B2FBE?style=for-the-badge&logo=linux">
+  <img src="https://img.shields.io/badge/Desktop-XFCE_4-2284F2?style=for-the-badge&logo=xfce">
+  <img src="https://img.shields.io/badge/Theme-Dracula-BD93F9?style=for-the-badge">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge">
 </div>
 
 ---
 
-**SharkOS** est une distribution Live Linux sur mesure. Elle fusionne l'élégance de macOS, les raccourcis familiers de Windows et la puissance des outils de cybersécurité de Kali Linux, le tout fonctionnant de manière fluide sur une base Debian 12 minimaliste.
+**SharkOS Dragon Edition** est une distribution Linux Live inspirée de [Garuda Linux](https://garudalinux.org), construite sur Debian 12. Elle pousse la performance gaming, l'esthétique dark glassmorphism, et l'arsenal cybersécurité à leur maximum.
 
-## ✨ Fonctionnalités clés
+## ⚡ Ce qui change vs v1 : le shift Garuda
 
-*   🍎 **Design Apple** : Thème WhiteSur-Dark, dock Plank translucide et barre supérieure façon macOS pour une esthétique moderne et épurée.
-*   🪟 **Ergonomie Windows** : Alias ZSH intégrés pour retrouver vos réflexes Windows (`dir`, `cls`, `ipconfig`, etc.) directement dans le terminal.
-*   🐉 **Arsenal Kali** : Outils de sécurité et de réseau pré-installés (Nmap, Wireshark, UFW) pour être opérationnel immédiatement.
+| Composant | v1 (macOS-style) | v2 Dragon Edition (Garuda-style) |
+| :--- | :--- | :--- |
+| **Kernel** | linux-amd64 (standard) | **linux-liquorix** (gaming/low-latency) |
+| **RAM** | Swap classique | **Zram zstd** 50% RAM |
+| **Thème** | WhiteSur-Dark (macOS) | **Dracula** + Papirus-Dark |
+| **Shell** | ZSH + agnoster | **ZSH + Powerlevel10k** |
+| **Dock** | Plank blanc | **Plank SharkDragon** (glassmorphism violet) |
+| **Curseurs** | Défaut | **Catppuccin-Mocha** |
+| **Compositor** | Picom léger | **Picom dual_kawase** (blur agressif) |
+| **Qt** | GTK pur | **Kvantum engine** (Qt transparent) |
+| **Gaming** | Wine basique | **Lutris + GameMode + MangoHud** |
+| **Sécurité** | nmap, wireshark | **+ aircrack, john, hydra, sqlmap, hashcat...** |
+| **Snapshots** | ✗ | **Btrfs + snapper** |
+| **Compression ISO** | gzip | **zstd max** |
+| **Réseau** | Standard | **BBR + FQ + sysctl tuné** |
+
+## ✨ Fonctionnalités Dragon Edition
+
+- 🐉 **Kernel Liquorix** : optimisé gaming/low-latency (équivalent linux-zen d'Arch)
+- ⚡ **Zram zstd** : 50% de la RAM en swap compressé, swappiness=10
+- 🎨 **Dracula Theme** : GTK + Kvantum + Papirus-Dark + Catppuccin curseurs
+- 🎮 **Gaming Stack** : Lutris + Wine + GameMode + MangoHud (`sharkgame <jeu>`)
+- 🛡️ **Arsenal Kali-grade** : 15+ outils sécu (aircrack, hydra, hashcat, sqlmap...)
+- 🔵 **Picom dual_kawase** : blur glassmorphism niveau Garuda
+- 📦 **Flatpak + Flathub** : apps modernes sans Snap
+- 🐚 **Powerlevel10k** : prompt ultra-rapide avec icônes Nerd Font
+- 📸 **Btrfs + Snapper** : snapshots auto avant chaque update
+- 🌐 **BBR + FQ** : TCP congestion control dernière génération
 
 ---
 
@@ -27,81 +53,133 @@
 
 | Paramètre | Valeur |
 | :--- | :--- |
-| **Base** | Debian 12 (Bookworm) minimal |
-| **Environnement** | XFCE 4 |
-| **Dock** | Plank |
-| **Thème GTK** | WhiteSur-Dark |
-| **Icônes** | WhiteSur |
-| **Shell** | ZSH + Oh My Zsh (thème `agnoster`) |
-| **Prompt** | `SharkOS 🦈 ~` |
-| **Outils de sécurité** | `nmap`, `wireshark`, `ufw`, `gufw` |
+| **Base** | Debian 12 (Bookworm) |
+| **Kernel** | Liquorix (gaming) / linux-amd64 (fallback) |
+| **Desktop** | XFCE 4 |
+| **Dock** | Plank (thème SharkDragon glassmorphism) |
+| **Thème GTK** | Dracula |
+| **Icônes** | Papirus-Dark |
+| **Curseurs** | Catppuccin-Mocha-Dark |
+| **Qt Engine** | Kvantum |
+| **Shell** | ZSH + Oh My Zsh + Powerlevel10k |
+| **Terminal** | XFCE4-Terminal (couleurs Dracula) |
+| **RAM Swap** | Zram zstd 50% |
+| **Snapshots** | Btrfs + Snapper |
+| **Outils sécu** | nmap, wireshark, aircrack, john, hydra, sqlmap, hashcat... |
+| **Gaming** | Lutris, Wine, GameMode, MangoHud |
+| **Login** | `shark` / `shark` |
 
 ---
 
 ## 🚀 Démarrage rapide
 
-### 1. Prérequis
-L'environnement de build nécessite un hôte sous **Debian** ou **Ubuntu**. Installez les dépendances suivantes :
+### 1. Prérequis (hôte Debian/Ubuntu)
 
 ```bash
 sudo apt update
-sudo apt install -y live-build squashfs-tools xorriso isolinux syslinux-utils git curl
-
+sudo apt install -y live-build squashfs-tools xorriso isolinux \
+                   syslinux-utils git curl zstd imagemagick
 ```
 
-### 2. Construction de l'ISO
-
-Clonez ce dépôt et lancez les scripts de build séquentiellement :
+### 2. Build de l'ISO
 
 ```bash
-# 0. Simuler et valider la configuration (Fortement recommandé)
+# Simulation (recommandé avant)
 bash scripts/simulate-build.sh
 
-# 1. Préparer l'environnement
+# Bootstrap
 bash scripts/00-bootstrap.sh
 
-# 2. Construire l'ISO (peut prendre un certain temps selon votre connexion)
+# Build ISO (30-60 min)
 sudo bash scripts/01-build-iso.sh
-
 ```
 
-> ✅ **Succès :** L'ISO finale sera générée dans le dossier `iso-build/SharkOS.iso`.
+> ✅ ISO générée dans `iso-build/SharkOS-Dragon-Edition.iso`
 
-### 3. Flasher sur USB (Optionnel)
-
-Pour créer une clé USB bootable avec votre nouvelle ISO :
+### 3. Flash USB
 
 ```bash
-# ATTENTION : Remplacez /dev/sdX par l'identifiant réel de votre clé USB (ex: /dev/sdb)
-# Utilisez la commande 'lsblk' pour identifier votre clé.
 sudo bash scripts/02-flash-usb.sh /dev/sdX
+```
 
+---
+
+## 🎮 Gaming
+
+```bash
+# Lancer un jeu avec GameMode + MangoHud
+sharkgame lutris
+sharkgame wine MonJeu.exe
+
+# Overlay FPS (MangoHud)
+MANGOHUD=1 monJeu
+
+# Installer des jeux via Flatpak
+flatpak install flathub com.heroicgameslauncher.hgl
+```
+
+## 🛡️ Sécurité
+
+```bash
+# Scan réseau
+shark-scan 192.168.1.0/24
+
+# Renifler le trafic
+shark-sniff
+
+# Randomiser les MACs
+shark-mac
+
+# Snapshot Btrfs
+shark-snap
+
+# Update tout (apt + flatpak)
+shark-update
 ```
 
 ---
 
 ## 🗂️ Structure du projet
 
-Une architecture claire et modulaire basée sur `live-build` :
-
 ```text
 SharkOS/
-├── README.md                  ← Documentation du projet
+├── README.md
 ├── scripts/
-│   ├── 00-bootstrap.sh        ← Prépare l'environnement live-build
-│   ├── 01-build-iso.sh        ← Lance la construction de l'ISO
-│   └── 02-flash-usb.sh        ← Flash l'ISO sur une clé USB
+│   ├── 00-bootstrap.sh          ← Config live-build (zstd, non-free, firmware)
+│   ├── 01-build-iso.sh          ← Build ISO Dragon Edition
+│   ├── 02-flash-usb.sh          ← Flash USB
+│   └── simulate-build.sh        ← Validation sans build réel
 ├── config/
-│   ├── .zshrc                 ← Shell ZSH avec alias Windows + prompt SharkOS
-│   ├── plank.dconf            ← Configuration du dock Plank
-│   └── xfce4-panel.xml        ← Barre du haut XFCE style macOS
+│   ├── garuda-packages.list     ← Mapping Garuda → SharkOS packages
+│   └── performance-tweaks.conf  ← Toutes les optimisations sysctl/kernel
 ├── chroot-hooks/
-│   ├── 10-install-tools.sh    ← Installe les outils de sécurité + ZSH
-│   ├── 20-apply-theme.sh      ← Installe WhiteSur GTK + icons
-│   └── 30-configure-shell.sh  ← Configure ZSH, prompt, aliases
-├── wallpapers/
-│   └── sharkos-wall.svg       ← Fond d'écran officiel SharkOS
-└── iso-build/
-    └── auto/
-        ├── config             ← Config principale live-build
-        └── clean              ← Script de nettoyage
+│   ├── 10-install-tools.sh      ← Liquorix, Zram, gaming, sécu, flatpak
+│   ├── 20-apply-theme.sh        ← Dracula, Papirus-Dark, Kvantum, Catppuccin
+│   ├── 30-configure-shell.sh    ← Powerlevel10k, Picom blur, Plank Dragon
+│   └── 40-cleanup.sh            ← Nettoyage + services perf (ananicy, nohang)
+└── wallpapers/
+    └── sharkos-wall.svg         ← Fond d'écran Dragon Edition
+```
+
+---
+
+## 📊 Comparaison Garuda vs SharkOS Dragon
+
+| Feature | Garuda Dr460nized | SharkOS Dragon |
+| :--- | :--- | :--- |
+| Base | Arch Linux | Debian 12 (stable) |
+| Kernel | linux-zen | Liquorix |
+| Desktop | KDE Plasma | XFCE 4 |
+| Dock | Latte Dock | Plank glassmorphism |
+| Thème | Dracula/Catppuccin | Dracula + Kvantum |
+| Shell | fish/zsh+starship | zsh+powerlevel10k |
+| Compositor | KWin | Picom dual_kawase |
+| Gaming | Oui | Oui |
+| **Cybersécurité** | ✗ | ✅ 15+ outils |
+| **ISO live** | ✗ | ✅ bootable direct |
+| Stabilité | Rolling | LTS Debian |
+
+<div align="center">
+  <b>🦈 Rapide. Furtif. Létal.</b><br>
+  <i>SharkOS Dragon Edition — La puissance de Garuda, la stabilité de Debian, l'arsenal de Kali.</i>
+</div>
