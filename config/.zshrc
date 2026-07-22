@@ -260,3 +260,36 @@ if command -v neofetch &>/dev/null && [[ -z "$SHARKOS_GREETED" ]]; then
   echo "  🎭 sharkmac        → Randomise tes adresses MAC"
   echo ""
 fi
+
+# =============================================================================
+# 🦈 SHARKOS DRAGON EDITION — Commandes uniques (hook 50)
+# =============================================================================
+
+# ── Commandes inédites SharkOS ───────────────────────────────────────
+alias shark-pulse='shark-pulse'
+alias shark-share='shark-share'
+alias shark-encrypt='shark-encrypt'
+alias shark-decrypt='shark-decrypt'
+alias shark-tooth='shark-tooth'
+alias shark-eye='shark-eye'
+alias shark-quiz='shark-quiz'
+alias shark-fortune='shark-fortune'
+alias shark-link='shark-link'
+alias shark-radar='shark-radar'
+alias shark-vpn='shark-vpn'
+alias shark-rec='shark-rec'
+alias shark-tor='shark-tor'
+
+# ── Commandes du hook 60 (polish) ───────────────────────────────────
+alias shark-doctor='shark-doctor'
+alias shark-firewall='shark-firewall'
+alias shark-clip='shark-clip'
+alias shark-restore='shark-restore'
+alias shark-arc='shark-arc'
+alias shark-archive='shark-arc'\nalias shark-install='sudo /usr/local/bin/sharkos-installer'\nalias shark-thin='sudo /usr/local/bin/calamares-sharkos-thick'\nalias shark-deploy='sudo /usr/local/bin/sharkos-install-cycle.sh'
+
+# ── Mise à jour globale APT + Flatpak ─────────────────────────────────
+alias shark-update='sudo apt update -y && sudo apt upgrade -y && flatpak update -y'
+
+# ── Sagesse du jour à chaque shell interactif ──────────────────────────
+[[ $- == *i* ]] && [[ -o interactive ]] && command -v shark-fortune &>/dev/null && shark-fortune

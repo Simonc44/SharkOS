@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+# =============================================================================
+# 🦈 SharkOS — sharkos-installer  v1.0
+# Installer "à la Arch/Calamares" écrit en pur bash + outils Debian standard.
+# Source d'inspiration : Garuda's `garuda-installer` (Ruby) — réécrit en bash
+# pour ne dépendre que de paquets déjà apt-installables.
+# =============================================================================
+# Usage :
+#   sudo sharkos-installer                          # interactive (default)
+#   sudo sharkos-installer /dev/sda                 # target disk specified
+#   sudo sharkos-installer /dev/sda --hostname foo # options
+# Options :
+#   --hostname NAME    hostname (default: sharkos)
+#   --username NAME    primary user (default: shark)
+#   --password PASS    primary user password (default: shark)
+#   --filesystem FSTY  ext4 | btrfs (default ext4)
+#   --no-swap          pas de partition swap (utilise ZRAM)
+#   --reboot           reboot après installation réussie
+#   --dry-run          simule toutes les phases, n'écrit pas
+#   --yes              skip la confirmation interactive ⚠
+# =============================================================================
+set -euo pipefail
+
+# -------------------------------------------------------------------- argparse
+TARGET_DISK=""
+HOSTNAME="sharkos"
+USERNAME="shark"
+PASSWORD="shark"
+FSTYPE="ext4"
+SWAP=true
+REBOOT_AFTER=false
+DRY_RUN=false
+ASSUME_YES=false
+
+usage() {
+  grep -E "^# " "$0" | sed 's/^# \{0,1\}//'
+  exit "${1:-1}"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --hostname)  HOSTNAME="$2"; shift 2 ;;
+    --username)  USERNAME="$2"; shift 2 ;;
+    --password)  PASSWORD="$2"; shift 2 ;;
+    --filesystem)FSTYPE="$2";   shift 2 ;;
+    --no-swap)   SWAP=false;   shift ;;
+    --reboot)    REBOOT_AFTER=true; shift ;;
+    --dry-run)   DRY_RUN=true; shift ;;
+    --yes|-y)    ASSUME_YES=true; shift ;;
+    -h|--help)   usage 0 ;;
+    /dev/*)      TARGET_DISK="$1"; shift ;;
+    *) echo "🦈 Option inconnue : $1"; usage 1 ;;
+  esac
+done
+
+# -------------------------------------------------------------------- couleurs
+PURPLE='\033[1;35m'; CYAN='\033[1;36m'; RED='\033[1;31m'; YELLOW='\033[1;33m'; GREEN='\033[1;32m'; RESET='\033[0m'
+
+# -------------------------------------------------------------------- helpers
+run() {
+  if [[ "$DRY_RUN" == true ]]; then
+    printf "  ${YELLOW}[dry-run]${RESET} %s\n" "$*"
+  else
+    "$@"
+  fi
+}
+
+err()  { printf "${RED}🦈 ERREUR :${RESET} %s\n" "$*" >&2; exit 1; }
+info() { printf "${PURPLE}🦈${RESET}  %s\n" "$*"; }
+ok()   { printf "${GREEN}  ✓ %s${RESET}\n" "$*"; }
+
+# -------------------------------------------------------------------- pré-flight
+[[ $EUID -eq 0 ]] || err "Doit être lancé en root : sudo $0"
+
+command -v debootstrap &>/dev/null || err "debootstrap manquant (sudo apt install debootstrap)"
+command -v sfdisk       &>/dev/null || err "sfdisk manquant (sudo apt install fdisk)"
+command -v mkfs.ext4    &>/dev/null || err "mkfs.ext4 manquant"
+command -v grub-install &>/dev/null || err "grub-install manquant (sudo apt install grub-pc grub-efi)"
+
+# Detect free/empty disk si non fourni
+if [[ -z "$TARGET_DISK" ]]; then
+  CANDIDATES=$(lsblk -nd -o NAME,SIZE,MODEL 2>/dev/null | awk '!/loop|rom/ && $2+0 > 0' | head -10)
+  [[ -z "$CANDIDATES" ]] && err "Aucun disque candidat. Spécifie /dev/sdX."
+  info "Disques candidats détectés :"
+  echo "$CANDIDATES" | awk '{printf "    %s  %-8s %s\n", NR, $1, substr($0,index($0,$2))}'
+  read -rp "  ${CYAN}►${RESET} Numéro du disque cible : " CHOICE
+  TARGET_DISK="/dev/$(echo "$CANDIDATES" | sed -n "${CHOICE}p" | awk '{print $1}')"
+fi
+
+[[ -b "$TARGET_DISK" ]] || err "$TARGET_DISK n'est pas un périphérique bloc"
+
+# -------------------------------------------------------------------- confirmation
+printf "\n"
+printf "${RED}═══════════════════════════════════════════════════════════${RESET}\n"
+printf "${RED}  ⚠  ATTENTION : toutes les données sur %s seront EFFACÉES.${RESET}\n" "$TARGET_DISK"
+printf "${RED}═══════════════════════════════════════════════════════════${RESET}\n"
+TARGET_SIZE=$(lsblk -d -b -o SIZE "$TARGET_DISK" 2>/dev/null | tail -1 | numfmt --to=iec)
+TARGET_MODEL=$(lsblk -d -o MODEL "$TARGET_DISK" 2>/dev/null | tail -1 | xargs)
+echo ""
+echo "  Périphérique : $TARGET_DISK"
+echo "  Modèle       : $TARGET_MODEL"
+echo "  Taille       : $TARGET_SIZE"
+echo "  Filesystem   : $FSTYPE  (ZRAM swap: $SWAP)"
+echo "  Hostname     : $HOSTNAME"
+echo "  Utilisateur  : $USERNAME"
+echo ""
+echo "  Étapes (toutes destructives) :"
+echo "    1) Partitionnement GPT + EFI 260 MiB + root"
+echo "    2) Formatage ext4 (ou btrfs)"
+echo "    3) debootstrap Debian 12 base"
+echo "    4) Bind-mount + cycle complet hooks chroot 10→60"
+echo "    5) GRUB install (UEFI + legacy BIOS)"
+echo "    6) Compte $USERNAME avec mot de passe fourni"
+echo "    7) fstab + reboot optionnel"
+echo ""
+
+if [[ "$ASSUME_YES" != true ]]; then
+  printf "${RED}Tape 'OUI' (majuscules) pour confirmer :${RESET} "
+  read -r CONFIRM
+  [[ "$CONFIRM" == "OUI" ]] || { echo "Annulé."; exit 0; }
+fi
+
+# -------------------------------------------------------------------- phase 1: partitionnement
+info "Phase 1/7 : Partitionnement GPT de $TARGET_DISK"
+run umount "${TARGET_DISK}"*  2>/dev/null || true
+run sfdisk --delete "$TARGET_DISK" 2>/dev/null || true
+
+if [[ "$DRY_RUN" == true ]]; then
+  echo "  [dry-run] sfdisk partitionnement skipped"
+else
+  # Layout : 260 MiB EFI + reste root (swap géré par ZRAM, pas de partition)
+  sfdisk --quiet "$TARGET_DISK" << EOF
+label: gpt
+size=260M, type=U
+type=L
+EOF
+fi
+# Partition 1: EFI 260MB, Partition 2: Linux
+PART_EFI="${TARGET_DISK}1"
+PART_ROOT="${TARGET_DISK}2"
+[[ "$DRY_RUN" == true ]] && { PART_EFI="${TARGET_DISK}p1"; PART_ROOT="${TARGET_DISK}p2"; }
+# Sur nvme disks (sda vs nvme0n1), la convention diffère
+if [[ ! -b "$PART_EFI" && "$TARGET_DISK" == *"nvme"* ]]; then
+  PART_EFI="${TARGET_DISK}p1"
+  PART_ROOT="${TARGET_DISK}p2"
+fi
+ok "Partition EFI : $PART_EFI"
+ok "Partition root: $PART_ROOT"
+
+# -------------------------------------------------------------------- phase 2: formatage
+info "Phase 2/7 : Formatage"
+run mkfs.vfat -F 32 -n SHARKOSEFI "$PART_EFI"
+case "$FSTYPE" in
+  ext4) run mkfs.ext4 -F -L SharkOSRoot "$PART_ROOT" ;;
+  btrfs)
+    run mkfs.btrfs -f -L SharkOSRoot "$PART_ROOT"
+    run mkdir -p /tmp/sharkos-mnt
+    run mount -t btrfs "$PART_ROOT" /tmp/sharkos-mnt
+    run btrfs subvolume create /tmp/sharkos-mnt/@
+    run btrfs subvolume create /tmp/sharkos-mnt/@home
+    run umount /tmp/sharkos-mnt
+    ;;
+  *) err "Filesystem $FSTYPE non supporté (ext4|btrfs uniquement)" ;;
+esac
+ok "Formatage terminé"
+
+# -------------------------------------------------------------------- phase 3: debootstrap
+info "Phase 3/7 : debootstrap (5–10 min)"
+TARGET="/target"
+run mkdir -p "$TARGET"
+run mount -t "$FSTYPE" "$PART_ROOT" "$TARGET"
+run mkdir -p "$TARGET/boot/efi"
+run mount -t vfat "$PART_EFI" "$TARGET/boot/efi"
+run debootstrap --arch amd64 --variant=minbase \
+  --include=linux-image-amd64,live-boot,systemd-sysv,console-setup,keyboard-configuration,locales,sudo,curl,wget,git,ca-certificates,zstd,xorriso,squashfs-tools,grub-pc,grub-efi,grub-efi-amd64,efibootmgr,plymouth \
+  bookworm "$TARGET" http://deb.debian.org/debian
+ok "Base Debian bookworm installée"
+
+# -------------------------------------------------------------------- phase 4: préparation chroot
+info "Phase 4/7 : Bind-mount /dev /proc /sys /run"
+for MP in dev proc sys run; do
+  run mount --bind /$MP "$TARGET/$MP"
+done
+ok "Bind-mounts actifs"
+
+# -------------------------------------------------------------------- phase 5: cycle des hooks
+info "Phase 5/7 : Cycle des hooks chroot (10 → 20 → 30 → 40 → 50 → 60)"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+run rsync -a --exclude='.git' "$SCRIPT_DIR/" "$TARGET/tmp/sharkos-build/"
+
+# bash 10-install-tools a besoin de sudo live, on le court-circuite
+run cp "$TARGET/tmp/sharkos-build/scripts/sharkos-install-cycle.sh" "$TARGET/tmp/cycle.sh"
+run chmod +x "$TARGET/tmp/cycle.sh"
+
+run chroot "$TARGET" /tmp/cycle.sh
+ok "Hooks SharkOS appliqués dans la cible"
+
+# -------------------------------------------------------------------- phase 6: GRUB
+info "Phase 6/7 : GRUB (UEFI + BIOS)"
+
+UUID_ROOT=$(blkid -s UUID -o value "$PART_ROOT")
+UUID_EFI=$(blkid -s UUID -o value "$PART_EFI")
+
+run chroot "$TARGET" /bin/bash -c "
+  export DEBIAN_FRONTEND=noninteractive
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=SharkOS --recheck 2>&1 | head -10
+  grub-install --target=i386-pc '$TARGET_DISK' 2>&1 | tail -5
+  update-grub
+"
+ok "GRUB installé (UEFI + legacy fallback)"
+
+# -------------------------------------------------------------------- Identifiants + fstab + finalisation
+info "Phase 7/7 : Identifiants, fstab, finale"
+run chroot "$TARGET" /bin/bash -c "
+  echo '$USERNAME:$PASSWORD' | chpasswd
+  echo 'root:$PASSWORD'     | chpasswd
+  echo '$HOSTNAME' > /etc/hostname
+  sed -i 's/^127.0.1.1.*/127.0.1.1 $HOSTNAME/' /etc/hosts
+"
+
+run tee "$TARGET/etc/fstab" >/dev/null << EOF
+# SharkOS fstab — generated by sharkos-installer
+UUID=$UUID_ROOT  /          $FSTYPE  defaults,noatime,compress=zstd:3  0 1
+UUID=$UUID_EFI   /boot/efi  vfat     umask=0077                       0 2
+tmpfs            /tmp       tmpfs    defaults,noatime                  0 0
+EOF
+
+# S'assurer que shark/shark + sudo NOPASSWD sont set dans la cible (si hook 50 ne l'a pas fait)
+run chroot "$TARGET" /bin/bash -c "
+  echo '$USERNAME ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/$USERNAME
+  chmod 440 /etc/sudoers.d/$USERNAME
+"
+ok "fstab + identifiants shark/shark OK"
+
+# Cleanup bind-mounts
+for MP in dev proc sys run boot/efi; do
+  run umount "$TARGET/$MP" 2>/dev/null || true
+done
+run umount "$TARGET" 2>/dev/null || true
+
+echo ""
+echo "${PURPLE}════════════════════════════════════════════════════════${RESET}"
+echo "${PURPLE}  🦈 SharkOS installé sur $TARGET_DISK !${RESET}"
+echo "${PURPLE}════════════════════════════════════════════════════════${RESET}"
+echo ""
+echo "  Hostname : $HOSTNAME"
+echo "  Login    : $USERNAME / $PASSWORD"
+echo ""
+[[ "$REBOOT_AFTER" == true ]] && run reboot || info "Retire la clé USB, puis sudo reboot"

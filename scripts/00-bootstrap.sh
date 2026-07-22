@@ -136,7 +136,9 @@ for HOOK in \
   "$ROOT_DIR/chroot-hooks/10-install-tools.sh" \
   "$ROOT_DIR/chroot-hooks/20-apply-theme.sh" \
   "$ROOT_DIR/chroot-hooks/30-configure-shell.sh" \
-  "$ROOT_DIR/chroot-hooks/40-cleanup.sh"; do
+  "$ROOT_DIR/chroot-hooks/40-cleanup.sh" \
+  "$ROOT_DIR/chroot-hooks/50-sharkos-finalize.sh" \
+  "$ROOT_DIR/chroot-hooks/60-sharkos-polish.sh"; do
   if [[ -f "$HOOK" ]]; then
     DEST="config/hooks/live/$(basename $HOOK .sh).hook.chroot"
     cp "$HOOK" "$DEST"
@@ -169,6 +171,6 @@ elif [[ -f "$ROOT_DIR/wallpapers/sharkos-wall.png" ]]; then
 fi
 
 echo ""
-echo "✅ Bootstrap terminé ! Lance ensuite :"
+echo "✅ Bootstrap terminé ! Hooks copiés : 10 → 20 → 30 → 40 → 50 → 60"
 echo "   sudo bash scripts/01-build-iso.sh"
 echo ""

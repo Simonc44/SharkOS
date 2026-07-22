@@ -55,15 +55,18 @@ CRITICAL_FILES=(
   "scripts/00-bootstrap.sh"
   "scripts/01-build-iso.sh"
   "scripts/02-flash-usb.sh"
+  "scripts/simulate-build.sh"
   "chroot-hooks/10-install-tools.sh"
   "chroot-hooks/20-apply-theme.sh"
   "chroot-hooks/30-configure-shell.sh"
   "chroot-hooks/40-cleanup.sh"
+  "chroot-hooks/50-sharkos-finalize.sh"
+  "chroot-hooks/60-sharkos-polish.sh"
   "config/.zshrc"
   "config/plank.dconf"
   "config/xfce4-panel.xml"
   "README.md"
-  "INSTRUCTIONS.md"
+  "INSTRUCTIONS.md"  "scripts/03-verify-iso.sh"
 )
 
 for FILE in "${CRITICAL_FILES[@]}"; do
@@ -190,6 +193,15 @@ if [[ -f "$ZSHRC" ]]; then
     "alias sharkscan="
     "alias sharkfw="
     "alias sharkav="
+    "alias shark-pulse="
+    "alias shark-share="
+    "alias shark-fortune="
+    "shark-tor"
+    "shark-doctor"
+    "shark-firewall"
+    "shark-clip"
+    "shark-restore"
+    "shark-arc"
   )
 
   for KEY in "${REQUIRED_ZSHRC_KEYS[@]}"; do
@@ -213,10 +225,13 @@ SHELL_FILES=(
   "scripts/00-bootstrap.sh"
   "scripts/01-build-iso.sh"
   "scripts/02-flash-usb.sh"
+  "scripts/simulate-build.sh"
   "chroot-hooks/10-install-tools.sh"
   "chroot-hooks/20-apply-theme.sh"
   "chroot-hooks/30-configure-shell.sh"
   "chroot-hooks/40-cleanup.sh"
+  "chroot-hooks/50-sharkos-finalize.sh"
+  "chroot-hooks/60-sharkos-polish.sh"  "scripts/03-verify-iso.sh"
 )
 
 for FILE in "${SHELL_FILES[@]}"; do

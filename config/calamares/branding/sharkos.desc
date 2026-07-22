@@ -1,0 +1,36 @@
+# =============================================================================
+# 🦈 SharkOS — Calamares branding descriptor (source version)
+# Mirrored at build time by chroot-hooks/60-sharkos-polish.sh into
+# /etc/calamares/sharkos/branding/sharkos.desc. Edit here, redeploy.
+# =============================================================================
+
+---
+windowTitle:      "SharkOS Dragon Edition — Installation"
+windowIcon:       "sharkos-logo.png"
+productName:      "SharkOS Dragon Edition"
+productUrl:       "https://github.com/Simonc44/SharkOS"
+version:          "2.0"
+shortVersion:     "2.0"
+extra:            "Performance Garuda. Arsenal Kali. Élégance Dark."
+brandingShortName: "sharkos"
+
+# Sidebar / step indicator
+sidebar:          "sidebar.html"
+sidebarqml:       ""
+
+# Welcome page
+welcomeStyle:     " Dracula"| ""        # styled via QSS (palette #0d0221/#e94560)
+welcomeCalamares: ""
+
+# Icons (multi-size resolutions: 16, 32, 64, 128, 256, 512)
+images:           "/etc/calamares/sharkos/branding/"
+
+# Splash image — 1920×1080 gradient violet/magenta
+splash:           "calamares-splash.png"
+
+# Qt stylesheet
+styleSheet:       "sharkos.qss"
+
+# Intro page (rendered on the welcome module)
+introPage:        "intro.html"
+---
