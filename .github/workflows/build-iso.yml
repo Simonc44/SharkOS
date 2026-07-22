@@ -2,6 +2,8 @@
 # 🦈 SharkOS — build-iso.yml
 # Construit l'ISO Dragon Edition quand un tag v* est poussé, ou via
 # workflow_dispatch manuel. Upload artifact + GitHub Release.
+# Stratégie : build NATIF sur le runner Ubuntu 22.04 (pas de docker = pas de
+# masquage d'exit code ni de stdin/heredoc fragile).
 # =============================================================================
 
 name: 🏗️ Build SharkOS Dragon Edition ISO
@@ -37,26 +39,18 @@ jobs:
       - name: 🧹 Tests statiques (rapide, <5s)
         run: bash tests/run-all.sh
 
-      - name: 🐧 Build ISO en container Debian Bookworm (privileged)
+      - name: 🐧 Installer les outils live-build (host natif)
         run: |
-          WORKDIR="$(pwd)"
-          docker run --rm --privileged \
-            -v "${WORKDIR}:/build" \
-            -w /build \
-            debian:bookworm \
-            bash <<'SHARKOS_EOF'
           set -euo pipefail
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update -qq
-          apt-get install -y --no-install-recommends \
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
             live-build debootstrap squashfs-tools xorriso isolinux \
             syslinux-utils syslinux-common genisoimage \
             imagemagick git curl wget ca-certificates rsync \
             lsb-release zstd sudo
-          echo "✅ live-build : $(live-build --version 2>&1 || echo installed)"
-          echo "✅ disk libre : $(df -h / | tail -1)"
 
-          # Wallpaper PNG de remplacement (CI n a pas acces au SVG dans wallpapers/)
+      - name: 🎨 Générer wallpaper PNG (pas de SVG convert en sandbox CI)
+        run: |
           mkdir -p wallpapers
           convert -size 1920x1080 gradient:"#0d0221-#1a0a2e" \
             -font DejaVu-Sans-Bold -pointsize 80 \
@@ -65,19 +59,22 @@ jobs:
             -pointsize 20 -fill "#f8f8f2" \
             -annotate +0+60 "Rapide. Furtif. Letal." \
             wallpapers/sharkos-wall.png || true
-          [[ -f wallpapers/sharkos-wall.png ]] && echo "✅ wallpaper généré"
+          ls -la wallpapers/
 
-          bash scripts/00-bootstrap.sh
-          bash scripts/01-build-iso.sh 2>&1 | tee /tmp/build.log | tail -20
-          SHARKOS_EOF
+      - name: 🚀 Bootstrap environnement live-build
+        run: sudo bash scripts/00-bootstrap.sh
+
+      - name: 🏗️ Construire l'ISO (peut prendre 30-60 min)
+        run: sudo bash scripts/01-build-iso.sh
 
       - name: 📦 Vérifier ISO + checksum
         id: iso-check
         run: |
-          ISO=$(ls iso-build/SharkOS-Dragon-Edition.iso 2>/dev/null || echo "")
+          set -euo pipefail
+          ISO=$(ls iso-build/SharkOS-Dragon-Edition.iso 2>/dev/null || true)
           if [[ -z "$ISO" || ! -f "$ISO" ]]; then
             echo "❌ ISO non trouvée dans iso-build/"
-            find iso-build -type f -name "*.iso" 2>&1 | head
+            find iso-build -type f -name "*.iso" 2>&1 | head || true
             exit 1
           fi
           echo "ISO_PATH=$ISO" >> "$GITHUB_OUTPUT"
@@ -123,11 +120,6 @@ jobs:
             2. Vérifiez : `sha256sum -c SharkOS-Dragon-Edition.iso.sha256`
             3. Flashez : `sudo bash scripts/02-flash-usb.sh /dev/sdX` ou utilisez balenaEtcher
             4. Bootez, autologin shark, lancez `shark-thin` depuis le menu Welcome
-
-            ## 🧪 Validation
-            - 7 tests automatisés : `bash tests/run-all.sh`
-            - validateur legacy : `bash scripts/simulate-build.sh`
-            - Tests OK dans la CI ci-dessus ✅
 
             ## ⚠️ Avertissement
             SharkOS embarque des outils offensifs (`aircrack-ng`, `hydra`, …). **À but éducatif uniquement.**
