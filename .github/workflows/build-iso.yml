@@ -44,32 +44,32 @@ jobs:
             -v "${WORKDIR}:/build" \
             -w /build \
             debian:bookworm \
-            bash -c '
-              set -euo pipefail
-              export DEBIAN_FRONTEND=noninteractive
-              apt-get update -qq
-              apt-get install -y --no-install-recommends \
-                live-build debootstrap squashfs-tools xorriso isolinux \
-                syslinux-utils syslinux-common genisoimage \
-                imagemagick git curl wget ca-certificates rsync \
-                lsb-release zstd sudo
-              echo "✅ live-build : $(live-build --version 2>&1 || echo installed)"
-              echo "✅ disk libre : $(df -h / | tail -1)"
+            bash <<'SHARKOS_EOF'
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            live-build debootstrap squashfs-tools xorriso isolinux \
+            syslinux-utils syslinux-common genisoimage \
+            imagemagick git curl wget ca-certificates rsync \
+            lsb-release zstd sudo
+          echo "✅ live-build : $(live-build --version 2>&1 || echo installed)"
+          echo "✅ disk libre : $(df -h / | tail -1)"
 
-              # Wallpaper PNG (CI n'a pas accès au SVG dans wallpapers/)
-              mkdir -p wallpapers
-              convert -size 1920x1080 gradient:"#0d0221-#1a0a2e" \
-                -font DejaVu-Sans-Bold -pointsize 80 \
-                -fill "rgba(233,69,96,0.85)" -gravity center \
-                -annotate +0-40 "SharkOS Dragon" \
-                -pointsize 20 -fill "#f8f8f2" \
-                -annotate +0+60 "Rapide. Furtif. Letal." \
-                wallpapers/sharkos-wall.png || true
-              [[ -f wallpapers/sharkos-wall.png ]] && echo "✅ wallpaper généré"
+          # Wallpaper PNG de remplacement (CI n a pas acces au SVG dans wallpapers/)
+          mkdir -p wallpapers
+          convert -size 1920x1080 gradient:"#0d0221-#1a0a2e" \
+            -font DejaVu-Sans-Bold -pointsize 80 \
+            -fill "rgba(233,69,96,0.85)" -gravity center \
+            -annotate +0-40 "SharkOS Dragon" \
+            -pointsize 20 -fill "#f8f8f2" \
+            -annotate +0+60 "Rapide. Furtif. Letal." \
+            wallpapers/sharkos-wall.png || true
+          [[ -f wallpapers/sharkos-wall.png ]] && echo "✅ wallpaper généré"
 
-              bash scripts/00-bootstrap.sh
-              bash scripts/01-build-iso.sh 2>&1 | tee /tmp/build.log | tail -20
-            '
+          bash scripts/00-bootstrap.sh
+          bash scripts/01-build-iso.sh 2>&1 | tee /tmp/build.log | tail -20
+          SHARKOS_EOF
 
       - name: 📦 Vérifier ISO + checksum
         id: iso-check
@@ -125,7 +125,7 @@ jobs:
             4. Bootez, autologin shark, lancez `shark-thin` depuis le menu Welcome
 
             ## 🧪 Validation
-            - 5 tests automatisés : `bash tests/run-all.sh`
+            - 7 tests automatisés : `bash tests/run-all.sh`
             - validateur legacy : `bash scripts/simulate-build.sh`
             - Tests OK dans la CI ci-dessus ✅
 
