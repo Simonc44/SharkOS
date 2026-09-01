@@ -2,17 +2,19 @@
 
 # 🦈 SharkOS — Dragon Edition
 
-**Performance Garuda. Arsenal Kali. Élégance Dark.**
-**Live ISO bootable, hardened, autologin. Login `shark` / `shark`.**
+### Live OS Debian/XPCE **au design HyperOS 6.0**
 
-<a href="https://github.com/Simonc44/SharkOS/releases/latest"><img src="https://img.shields.io/badge/Version-2.0_Dragon-e94560?style=for-the-badge" alt="Version"></a>
-<img src="https://img.shields.io/badge/Base-Debian_12_Bookworm-A80030?style=for-the-badge&logo=debian">
-<img src="https://img.shields.io/badge/Kernel-XanMod_LTS-7B2FBE?style=for-the-badge&logo=linux">
-<img src="https://img.shields.io/badge/CPU-schedutil_%2B_shark_turbo-50FA7B?style=for-the-badge&logo=amd">
-<img src="https://img.shields.io/badge/Desktop-XFCE_4-2284F2?style=for-the-badge&logo=xfce">
-<img src="https://img.shields.io/badge/Theme-Dracula-BD93F9?style=for-the-badge">
-<img src="https://img.shields.io/badge/Tests-passing-brightgreen?style=for-the-badge">
-<img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge">
+*La même philosophie visuelle que **Xiaomi HyperOS** — glassmorphism, police MiSans, coins ultra-arrondis, widgets vivants, animations fluides — appliquée à un système Linux durci & performant.*
+
+[![Version](https://img.shields.io/badge/Version-3.0_Dragon-2563eb?style=for-the-badge)](https://github.com/Simonc44/SharkOS/releases/latest)
+[![Base](https://img.shields.io/badge/Base-Debian_12_Bookworm-A80030?style=for-the-badge&logo=debian)](https://www.debian.org)
+[![Kernel](https://img.shields.io/badge/Kernel-XanMod_LTS-7B2FBE?style=for-the-badge&logo=linux)](https://xanmod.org)
+[![Desktop](https://img.shields.io/badge/Desktop-XFCE_4-22A7F0?style=for-the-badge&logo=xfce)](https://xfce.org)
+[![Design](https://img.shields.io/badge/Design-HyperOS_6.0-2563eb?style=for-the-badge)](https://hyperos.mi.com)
+[![Tests](https://img.shields.io/badge/Tests-10_suites-passing?style=for-the-badge&color=22C55E)](https://github.com/Simonc44/SharkOS/actions)
+[![ISO](https://img.shields.io/badge/ISO-%3C_2_Go-22C55E?style=for-the-badge)](https://github.com/Simonc44/SharkOS/releases)
+
+**Live ISO bootable · autologin `shark`/`shark` · sécurité durcie · ISO < 2 Go**
 
 </div>
 
@@ -21,180 +23,125 @@
 ## 📋 Table des matières
 
 1. [À propos](#-à-propos)
-2. [TL;DR — démarrage express](#-tldr--démarrage-express)
-3. [Identifiants & login](#-identifiants--login)
-4. [Fonctionnalités Dragon Edition](#-fonctionnalités-dragon-edition)
-5. [Commandes exclusives `shark-*`](#-commandes-exclusives-shark-) — **25 commandes**
-6. [Architecture du projet](#-architecture-du-projet)
-7. [Tests automatisés](#-tests-automatisés)
-8. [Build complet](#-build-complet)
-9. [Roadmap](#-roadmap)
-10. [Crédits & inspirations](#-crédits--inspirations)
+2. [🎨 Design HyperOS 6.0 — le cœur du projet](#-design-hyperos-60--le-cœur-du-projet)
+3. [Fonctionnalités](#-fonctionnalités)
+4. [Commandes exclusives `shark-*`](#-commandes-exclusives-shark-)
+5. [Architecture du projet](#-architecture-du-projet)
+6. [Tests automatisés](#-tests-automatisés)
+7. [Build complet](#-build-complet)
+8. [Installation sur disque](#-installation-sur-disque)
+9. [CI / CD](#-ci--cd)
+10. [Roadmap](#-roadmap)
+11. [Sécurité & éthique](#-sécurité--éthique)
+12. [Crédits & inspirations](#-crédits--inspirations)
 
 ---
 
 ## 🦈 À propos
 
-**SharkOS Dragon Edition** est une distribution Linux **Live** bootable, bâtie sur **Debian 12 Bookworm** et durcie pour la performance *gaming* et la cybersécurité. C'est un projet **100 % scripté** : aucune image binaire précompilée, tout est assemblé à la volée via `live-build` au moment du build.
+**SharkOS Dragon Edition** est une distribution Linux **Live** qui réunit trois ambitions dans une seule ISO :
 
-* **Garuda** inspire la performance : kernel XanMod LTS, ZRAM zstd, BBR + FQ, picom dual-kawase, governor schedutil + shark-turbo.
-* **Kali** inspire l'arsenal : nmap, aircrack, hydra, john, sqlmap, hashcat, wireshark…
-* **Dracula** inspire l'esthétique : GTK Dracula + Papirus-Dark + Kvantum SharkDragon + Catppuccin curseurs + Powerlevel10k + Picom glassmorphism.
+1. **🎨 L'esthétique HyperOS de Xiaomi** — le système reprend le language de design d'HyperOS 6.0 : glassmorphism, police officielle MiSans, coins très arrondis, dégradés vibrants, widgets vivants sur le bureau et animations fluides (voir la section dédiée ci-dessous).
+2. **⚡ La performance** — kernel **XanMod LTS** (réduit la latence, gaming), ZRAM compressé zstd, BBR congestion control, mode CPU turbo instantané.
+3. **🛡️ La sécurité** — pare-feu UFW actif par défaut, AppArmor, kernel durci, sysctl anti-exploitation, Firefox privatisé.
 
-L'ISO générée boote **directement sur le bureau XFCE sans écran de login** (autologin shark), avec un splash Plymouth 🦈 et un menu first-boot graphique.
-
----
-
-## ⚡ TL;DR — démarrage express
-
-```bash
-# 1. Valider le projet (zéro build, ~3 secondes)
-bash tests/run-all.sh
-
-# 2. Installer les dépendances host (Debian 12 / Ubuntu 22.04+)
-sudo apt update && sudo apt install -y live-build squashfs-tools xorriso zstd
-
-# 3. Bootstrap + Build (20–60 min)
-sudo bash scripts/00-bootstrap.sh
-sudo bash scripts/01-build-iso.sh
-
-# 4. ISO finale
-ls -lh iso-build/SharkOS-Dragon-Edition.iso
-
-# 5. Flash USB (⚠ NE PAS LANCER sans clé cible)
-sudo bash scripts/02-flash-usb.sh /dev/sdX
-```
-
-> 💡 L'ISO est aussi utilisable dans **QEMU** sans flash :
-> `qemu-system-x86_64 -m 2048 -cdrom iso-build/SharkOS-Dragon-Edition.iso -boot d`
+Le projet est **100 % scripté** : aucun binaire précompilé dans le repo. L'ISO est assemblée à la volée par `live-build` à partir de Debian 12 Bookworm, avec 6 hooks chroot (10→60) qui installent, configurent et polissent le système.
 
 ---
 
-## 🔑 Identifiants & login
+## 🎨 Design HyperOS 6.0 — le cœur du projet
 
-| Compte | Mot de passe | Notes |
+> **Le choix de conception central de SharkOS : reproduire l'expérience visuelle d'HyperOS (le système de Xiaomi) sur un desktop Linux.**
+
+SharkOS ne se contente pas d'appliquer un thème : il réplique les **principes de design signatures d'HyperOS 6.0**, éléments par élément.
+
+### Le comparatif — SharkOS vs HyperOS 6.0
+
+| Élément HyperOS 6.0 | Équivalent SharkOS | Détail |
 |---|---|---|
-| `shark` | `shark` | Utilisateur principal, autologin LightDM, sudo NOPASSWD |
-| `root` | `shark` | sudoer via `shark`, accessible via `sudo su -` |
+| 🔤 **Police MiSans** (celle d'HyperOS) | ✅ **MiSans** (Regular / Medium / Bold) | Police officielle Xiaomi, téléchargée au build, appliquée partout : GTK, xsettings, fenêtres, GRUB |
+| 🪟 **Glassmorphism** (verre dépoli) | ✅ **Blur `dual_kawase` renforcé** | Flou d'arrière-plan + panneaux translucides → effet verre dépoli sur windows/panels/dock |
+| ⭕ **Coins très arrondis** | ✅ **20 px** (picom) | La signature visuelle d'HyperOS : panneaux et fenêtres aux angles généreux |
+| 🌈 **Dégradés vibrants** | ✅ **Fond pastel bleu→violet + halos lumineux** | Dégradé `#e0eaff → #e9d5ff` avec halos cyan/rose composés en *Screen* — profondeur lumineuse type MIUI |
+| 🎛️ **Interface lumineuse & claire** | ✅ **Thème clair** | WhiteSur-Light + icônes Papirus-Light + curseurs Catppuccin-Latte (opposé du dark Dracula, gardé en fallback) |
+| 📱 **Barre de notification translucide en haut** | ✅ **Panel XFCE blanc translucide** | rgba blanc 42 %, arrondi 14 px |
+| 🖱️ **Dock avec magnification** | ✅ **Plank glass clair, zoom 150 %** | Icônes qui grossissent au survol, dock en verre blanc |
+| 🗂️ **Drawer d'apps au toucher (Super)** | ✅ **Launcher instantané sur la touche Super** | rofi en verre blanc, coins 16 px, sélection bleue `#2563eb`, recherche fuzzy |
+| 🕒 **Widgets vivants** (horloge, météo, stats) | ✅ **Widgets conky glassmorphism** | Horloge géante MiSans, CPU/RAM avec processus, disque avec barre, réseau (↓/↑ + IP), batterie |
+| 🎬 **Animations fluides** | ✅ **XFWM4 animé + Compiz optionnel** | Aperçu Alt+Tab, zoom desktop, transitions de workspace — et `shark-anim on` pour le **cube 3D / scale / wobble** |
+| 🖥️ **Boot animé** | ✅ **Plymouth + GRUB pastel** | Splash au démarrage, menu GRUB sur fond dégradé clair avec panneau de sélection glass arrondi en police MiSans |
+| ⚡ **Mode performance** | ✅ **`shark-turbo on`** | Bascule instantanée du CPU en mode *performance* pour un ressenti « tout est fluide, tout est rapide » |
 
-Renforcements côté build (hooks 10/30/50) : hash **SHA-512** avec **sel aléatoire** (8 octets), expiration désactivée, mot de passe verrou levé (`passwd -u shark`), `/etc/sudoers.d/shark` à 0440.
+### Pourquoi ce choix ?
+
+HyperOS a popularisé une identité visuelle qui se caractérise par la **douceur** : des transitions soyeuses, un verre dépoli omniprésent, des formes très arrondies et une police claire et moderne (MiSans). SharkOS transpose ces principes sur XFCE — un environnement léger et rapide — pour obtenir un bureau qui *se sent* fluide et premium au quotidien, exactement dans l'esprit d'un téléphone Xiaomi haut de gamme.
 
 ---
 
-## ✨ Fonctionnalités Dragon Edition
+## ✨ Fonctionnalités
 
 ### Boot & session
 
-* 🦈 **Plymouth "Shark Dragon"** — splash silhouette + œil violet + spinner Dracula
-* 🌫️ **GRUB Dragon theme** — fond violet/magenta + menu Dracula typographié
-* 🔓 **LightDM autologin shark** — bureau direct sans écran de login
-* 🎉 **Welcome wizard first-boot** — menu 8 actions (install, password, Wi-Fi, Steam, Tor…)
+* 🦈 **Plymouth « Shark Dragon »** — splash au démarrage
+* 🌫️ **GRUB theme clair HyperOS** — dégradé pastel, panneau glass arrondi, police MiSans
+* 🔓 **LightDM autologin `shark`** — bureau direct, aucune saisie de mot de passe
+* 🎉 **Wizard de premier boot** — assistant graphique (clavier, création de compte) au style liquid glass
 
-### 📦 Taille ISO < 2 Go
+### 📦 ISO légère (< 2 Go)
 
-* ⚖️ **ISO ≈ 1,3–1,5 Go** (squashfs zstd) — sous la barre des 2 Go
-* 🎮 **Stack gaming (Wine + Lutris ≈ 1,8 Go) exclue** de l'ISO par défaut → `sudo shark-extras gaming`
-* 📄 **LibreOffice ≈ 800 Mo exclu** → `sudo shark-extras office`
-* ✉️ **Thunderbird ≈ 270 Mo exclu** → `sudo shark-extras mail` (ou `all`)
-* 💡 Tout s'installe à la demande, en 1 commande, sans rebuild
+* ⚖️ **ISO ≈ 1,3–1,5 Go** (squashfs zstd) — la cible des 2 Go est respectée
+* 🎮 **Gaming (Wine + Lutris ≈ 1,8 Go) en option** → `shark-extras gaming`
+* 📄 **LibreOffice ≈ 800 Mo en option** → `shark-extras office` · ✉️ **Thunderbird** → `shark-extras mail`
+* 💡 Tout s'installe à la demande en 1 commande, sans rebuild
+
+### ⚡ Performance
+
+* 🐉 **Kernel XanMod LTS** — gaming / low-latency (BBRv3, MGLRU, sched_ext)
+* 💾 **ZRAM zstd 50 % RAM**, `vm.swappiness=10`
+* 🚀 **Governor `schedutil`** au boot + **`shark-turbo`** pour basculer en performance instantanée
+* 🖥️ **Picom GLX** + `unredir-if-possible` → +FPS en plein écran
+* ⚙️ `sched_autogroup` + dirty writeback → moins d'à-coups multi-applications
+* 🛡️ ananicy-cpp, nohang, irqbalance, thermald actifs au boot
 
 ### 🛡️ Sécurité
 
-* 🔥 **UFW actif par défaut** — deny entrant, allow sortant (profile open/balanced/paranoid)
-* 🛡️ **AppArmor** — confinement des apps + profils Debian enforce
-* 🧠 **Kernel durci** au boot : `mitigations=on`, `page_poison=1`, `slab_nomerge`, `audit=1`
-* 🔒 **Sysctl hardening** : `dmesg_restrict`, `kptr_restrict=2`, `ptrace_scope=2`, `tcp_syncookies`, anti-spoof martians
-* 🚫 **Core dumps bloqués** + services risqués désactivés (avahi, cups, rpcbind, modemmanager…)
-* 🌐 **Firefox durci** : anti-tracking/fingerprinting, DNS-over-HTTPS, télémétrie off, HTTPS-only
-
-### Performance
-
-* 🐉 **Kernel XanMod LTS** gaming/low-latency (BBRv3, MGLRU, sched_ext)
-* ⚡ **ZRAM zstd 50 % RAM**, swapiness=10
-* 🚀 **CPU governor schedutil** + `shark-turbo` → bascule performance instantanée
-* 🖥️ **Picom GLX** + `unredir-if-possible` → +FPS en plein écran, fade rapide HyperOS
-* 🧩 **Launcher rofi Dracula** (glass, blur) accessible à la touche **Super** — drawer d'apps instantané type HyperOS
-* ⚙️ **sched_autogroup + dirty writeback** → moins d'à-coups quand plusieurs apps tournent
-
-### Design HyperOS 6.0 (clair & vibrant)
-
-* 🔤 **Police MiSans** (officielle Xiaomi/HyperOS) par défaut partout (GTK, xsettings)
-* 🌈 **Thème clair** : WhiteSur-Light + icônes **Papirus-Light** + fond **pastel bleu→violet** avec halos (MIUI lumineux)
-* 🪟 **Coins arrondis 20px** + blur `dual_kawase` renforcé + ombres douces (glassmorphism)
-* 📱 **Panel XFCE blanc translucide arrondi** + dock Plank **glass clair** avec magnification 150 %
-* 🚀 **rofi HyperOS** sur la touche **Super** — verre blanc, coins 16px, sélection bleue
-* 🕒 **Widgets vivants conky** (horloge, date, CPU/RAM, disque, réseau, batterie) — glassmorphism
-* 🖥️ **GRUB modernisé** : fond clair HyperOS, panneau de sélection arrondi glass, police MiSans
-
-### ✨ Animations type HyperOS
-
-* 🎬 **XFWM4 animé** par défaut : cycle des fenêtres avec aperçu, zoom desktop, transition workspace
-* 🌟 **`shark-anim on`** → **Compiz** : fenêtres qui s'ouvrent en **scale/zoom**, **cube 3D** entre workspaces, **wobble**, animations de focus (spectaculaire)
-* ⚡ **`shark-anim off`** → retour **picom** léger (FPS gaming, stable)
-* 💨 Fade rapide des fenêtres + dock magnifié 150 % au survol
-* 🌐 **BBR + FQ** TCP congestion control
-* 🎚️ **Sysctl durci** (vfs_cache_pressure, inotify, rp_filter, fastopen)
-* 🛡️ **Ananicy-cpp + nohang + irqbalance + thermald** activés au boot
-
-### Sécurité
-
-* 🛡️ **Arsenal Kali-grade** — nmap, aircrack, hydra, john, hashcat, sqlmap, gobuster, nikto, binwalk, steghide, exiftool, volatility3…
-* 🛡️ **MAC randomisation automatique** à chaque boot (`sharkos-mac-randomize.service`)
-* 📸 **BTRFS + snapper** — snapshots avant update
-* 🦠 **ClamAV + freshclam** antivirus résident
-
-### Gaming
-
-* 🎮 Lutris + Wine + GameMode + MangoHud (`sharkgame <exe>`)
-* 🎲 **Multiarch i386** activé pour Wine32 / Proton
-
-### Bureau
-
-* 🎨 **Dracula theme** (GTK + Kvantum + Papirus-Dark + Catppuccin-Mocha cursors)
-* 🔵 **Picom dual_kawase** blur agressif (style Garuda Dr460nized)
-* 🐚 **Powerlevel10k** prompt ultra-rapide avec icônes Nerd Font
-* 🦈 **Plank SharkDragon** dock glassmorphism violet/magenta
-* 🖥️ **XFCE 4 panel** custom bas + Dracula colors
-
-### Identité OS
-
-```ini
-NAME="SharkOS"
-VERSION="2.0 (Dragon Edition)"
-PRETTY_NAME="SharkOS 2.0 🦈 Dragon Edition"
-HOME_URL="https://github.com/Simonc44/SharkOS"
-ANSI_COLOR="1;35"
-```
+* 🔥 **UFW actif par défaut** — deny entrant, allow sortant, profils `open`/`balanced`/`paranoid`
+* 🛡️ **AppArmor** — confinement applicatif + profils Debian enforce
+* 🧠 **Boot durci** : `mitigations=on`, `page_poison=1`, `slab_nomerge`, `audit=1`
+* 🔒 **Sysctl anti-exploitation** : `dmesg_restrict`, `kptr_restrict=2`, `ptrace_scope=2`, `tcp_syncookies`, anti-spoof martians
+* 🚫 Core dumps bloqués, services risqués désactivés (avahi, cups, rpcbind, modemmanager…)
+* 🌐 **Firefox durci** : anti-tracking/fingerprinting, DoH, télémétrie off, HTTPS-only
+* 🛠️ **Outils Kali-grade** : nmap, aircrack-ng, hydra, john, hashcat, sqlmap, gobuster, nikto, binwalk…
+* 📸 **BTRFS + snapper** — snapshots avant mise à jour · 🦠 **ClamAV** antivirus résident
 
 ---
 
 ## 🦈 Commandes exclusives `shark-*`
 
-> 18 commandes introuvables dans une autre distro. Tapables directement depuis le shell.
+> **20 commandes** introuvables ailleurs — installées dans `/usr/local/bin/` et aliasées dans `.zshrc` pour tous les utilisateurs.
 
 | Commande | Description |
 |---|---|
-| `shark-pulse`   | Monitoring live CPU/RAM/DISK/NET avec sparkline Unicode (refresh 1 s) |
-| `shark-share`   | Serveur **HTTPS + QR code** pour partager un fichier en local |
-| `shark-encrypt` | Chiffrement **AES-256-CBC + PBKDF2 200k iter** → `*.enc`, original shredé |
-| `shark-decrypt` | Déchiffre un `.enc` |
-| `shark-tooth`   | **Shredder sécurisé** (3 passes random + zero-fill + unlink) |
-| `shark-eye`     | `tcpdump` colorisé **Dracula** (TCP cyan / UDP jaune / ICMP violet) |
-| `shark-quiz`    | Quiz cybersécurité interactif **10 questions + score final** |
-| `shark-fortune` | Sagesse aléatoire à chaque ouverture de shell |
-| `shark-link`    | Envoi fichier LAN via `nc` + **barre de progression `pv`** |
-| `shark-radar`   | Boucle de scan Wi-Fi (ESSID + qualité + chiffrement) |
-| `shark-vpn`     | Générateur profil **WireGuard** (`init` puis `profile <peer> <ip>`) |
-| `shark-rec`     | Capture terminal → **asciinema** cast |
-| `shark-tor`     | Toggle / status / check du service **Tor** |
-| `shark-doctor`  | Diagnostic complet (kernel XanMod, ZRAM, BBR, services, paquets cassés) |
-| `shark-turbo`   | Mode **performance instantané** type HyperOS (`on`/`off`/`status`) |
-| `shark-firewall`| Switch instantané profils UFW : **open** / **balanced** / **paranoid** |
-| `shark-clip`    | **Presse-papiers chiffré AES-256** avec historique restreint (32 items) |
-| `shark-restore` | Rollback des configs SharkOS depuis `/etc/sharkos/backups` |
-| `shark-arc`     | Archiveur intelligent : `zstd > xz > gz` auto-détecté |
-
-Toutes les commandes sont installées dans `/usr/local/bin/` par les hooks 50/60. Les alias `shark-*` sont ajoutés dans `/etc/skel/.zshrc` pour que tout nouvel utilisateur les hérite.
+| `shark-turbo on/off` | Mode CPU **performance instantané** (ressenti HyperOS) |
+| `shark-anim on/off` | Bascule animations **Compiz** (cube 3D, scale, wobble) ↔ picom léger |
+| `shark-extras <gaming\|office\|mail\|all>` | Installe les gros paquets optionnels (ISO < 2 Go) |
+| `shark-pulse` | Monitoring live CPU/RAM/DISK/NET avec sparklines |
+| `shark-share` | Serveur HTTPS + QR code pour partager un fichier |
+| `shark-encrypt` / `shark-decrypt` | Chiffrement **AES-256-CBC + PBKDF2 200k itérations** |
+| `shark-tooth` | Shredder sécurisé (3 passes random + zero-fill) |
+| `shark-eye` | `tcpdump` colorisé |
+| `shark-quiz` | Quiz cybersécurité (10 questions) |
+| `shark-link` | Envoi de fichier LAN via `nc` + barre `pv` |
+| `shark-radar` | Scan Wi-Fi (ESSID, qualité, chiffrement) |
+| `shark-vpn` | Générateur de profils WireGuard |
+| `shark-rec` | Capture de session (asciinema) |
+| `shark-tor` | Toggle / status Tor |
+| `shark-doctor` | Diagnostic complet (kernel, ZRAM, BBR, services…) |
+| `shark-firewall` | Switch de profils UFW |
+| `shark-clip` | Presse-papiers chiffré AES-256 (historique 32 items) |
+| `shark-restore` | Rollback des configs |
+| `shark-arc` | Archiveur intelligent (zstd → xz → gz) |
+| `shark-fortune` | Citation aléatoire au lancement du shell |
 
 ---
 
@@ -202,101 +149,71 @@ Toutes les commandes sont installées dans `/usr/local/bin/` par les hooks 50/60
 
 ```
 SharkOS/
-├── README.md                  ← ce fichier
-├── INSTRUCTIONS.md            ← guide pas-à-pas (legacy v1)
 ├── scripts/
-│   ├── 00-bootstrap.sh        ← Config live-build + copie les hooks (boucle)
-│   ├── 01-build-iso.sh        ← Construit l'ISO (live-build + lb build)
-│   ├── 02-flash-usb.sh        ← dd sur /dev/sdX (MANUEL uniquement)
-│   └── simulate-build.sh      ← Validateur principal (legacy v1)
-
-├── chroot-hooks/              ← installateurs utilisateur embarqués dans l'ISO
-│   ├── 10-install-tools.sh    ← XanMod, ZRAM, governor, gaming, sécu, clamav
-│   ├── 20-apply-theme.sh      ← Dracula, Papirus-Dark, Kvantum, Catp
-│   ├── 30-configure-shell.sh  ← Powerlevel10k, Picom, Plank, XFCE, .zshrc
-│   ├── 40-cleanup.sh          ← APT cleanup, ananicy, nohang, MOTD
-│   ├── 50-sharkos-finalize.sh ← 🦈 shark/shark durci, autologin, Plymouth,
-│   │                             GRUB theme, welcome wizard, 13 shark-*
-│   └── 60-sharkos-polish.sh   ← 🦈 5 shark-* supplémentaires + Plymouth/GRUB polish
-
-├── config/
-│   ├── .zshrc                 ← shell Powerlevel10k + alias shark-* + fortune
-│   ├── plank.dconf            ← dock Plank config (Position=3, Zoom, SharkDragon)
-│   ├── xfce4-panel.xml        ← panel XFCE custom bas + Dracula
-│   ├── garuda-packages.list   ← mapping Garuda → SharkOS packages
-│   ├── performance-tweaks.conf← sysctl/kernel tuning complet
-│   ├── sharkos-setup-wizard   ← assistant first-boot graphique
-│   ├── sharkos-autostart-setup← lanceur wizard
-│   └── install-sharkos.desktop, sharkos-setup-wizard.desktop
-
-├── tests/                     ← 🆕 suite de tests automatisés
-│   ├── run-all.sh             ← orchestrateur principal
-│   ├── test-syntax.sh         ← bash -n sur tous les .sh
-│   ├── test-assets.sh         ← structure, fichiers critiques, exe bits
-│   ├── test-configs.sh        ← XML, plank, .zshrc completeness
-│   ├── test-hooks.sh          ← cohérence chroot ↔ bootstrap ↔ simulate
-│   └── test-aliases.sh        ← couverture alias shark-* canoniques
-
-├── wallpapers/                ← PNG uniquement (SVG interdit)
-└── iso-build/                 ← sortie live-build (ISO finale ici)
+│   ├── 00-bootstrap.sh        ← Configure live-build + copie hooks & kit install
+│   ├── 01-build-iso.sh        ← Construit l'ISO (lb build, log /tmp/sharkos-build.log)
+│   ├── 02-flash-usb.sh        ← Flash USB (dd, double confirmation OUI)
+│   ├── 03-verify-iso.sh       ← Vérifie l'ISO (SHA256, MBR, El Torito, squashfs)
+│   ├── simulate-build.sh      ← Validateur statique des configs
+│   └── sharkos-installer      ← Installateur sur disque (GPT, debootstrap, hooks)
+├── chroot-hooks/              ← Exécutés dans le chroot lors du build
+│   ├── 10-install-tools.sh    ← XanMod, ZRAM, governor, sécu, outils, MiSans
+│   ├── 20-apply-theme.sh      ← Thème clair HyperOS, fond pastel, icônes
+│   ├── 30-configure-shell.sh  ← Picom/UI, panel, dock, rofi, widgets, login
+│   ├── 40-cleanup.sh          ← Nettoyage, UFW, AppArmor, MOTD, services
+│   ├── 50-sharkos-finalize.sh ← Identifiants, autologin, GRUB, shark-* (x6)
+│   └── 60-sharkos-polish.sh   ← shark-* restants, Calamares bundle
+├── config/                    ← Configs embarquées (polices, panels, sysctl…)
+├── tests/                     ← 10 suites de tests automatisés
+├── wallpapers/                ← PNG uniquement
+└── iso-build/                 ← Sortie live-build (l'ISO finale vit ici)
 ```
 
-**Ordre d'exécution des hooks** (par 00-bootstrap.sh) :
-`10-install-tools.sh → 20-apply-theme.sh → 30-configure-shell.sh → 40-cleanup.sh → 50-sharkos-finalize.sh → 60-sharkos-polish.sh`
+**Ordre des hooks** : `10 → 20 → 30 → 40 → 50 → 60` — chaque étape prépare la suivante, de l'installation brute jusqu'au polish final.
 
 ---
 
 ## 🧪 Tests automatisés
 
 ```bash
-# Suite complète : tests statiques rapides (~25 s)
+# Suite complète (tests statiques rapides)
 bash tests/run-all.sh
 ```
 
-| Test | Vérifie | Sortie illustrative |
-|---|---|---|
-| `test-syntax.sh`  | `bash -n` sur tous les `.sh`         | `OK: chroot-hooks/60-sharkos-polish.sh ✓` |
-| `test-assets.sh`  | présence fichiers critiques, exe bit | `✓ file config/.zshrc` |
-| `test-configs.sh` | XML XFCE + plank.dconf + .zshrc keys | `✓ Position=3, ✓ zoom`, 25 alias shark-* |
-| `test-hooks.sh`   | chaque hook est référencé par bootstrap ET simulate | cohérence disque ↔ scripts |
-| `test-aliases.sh` | couverture des 25 alias canoniques    | `Coverage : 25/25` |
-| `test-installer.sh` | kit installer + Calamares + hook 60 wiring | `✓ sharkos-installer shipé` |
-| `test-live-usb.sh` | flash USB (iso-hybrid, dd, OUI) + verify ISO | `✓ dd if` / `✓ SHA256` |
-| `test-login.sh`   | chaîne login : shark/shark, PAM, autologin | `✓ common-session`, `✓ autologin-user=shark` |
-| `test-wizard.sh`  | setup-wizard Python (syntaxe, autologin, validation) | `✓ py_compile`, `✓ drop-in conf.d` |
-| `test-boot.sh` 🖥️ | **TEST SYSTÈME RÉEL** (voir ci-dessous) | `SKIP` sans ISO → `🦈 ISO VALIDÉE` après boot QEMU |
+| Test | Vérifie |
+|---|---|
+| `test-syntax.sh` | `bash -n` sur tous les scripts |
+| `test-assets.sh` | Fichiers critiques + bits exécutables |
+| `test-configs.sh` | Configs XML/plank/.zshrc + design HyperOS + sécurité |
+| `test-hooks.sh` | Cohérence hooks ↔ bootstrap ↔ simulate |
+| `test-aliases.sh` | Couverture des 20 alias `shark-*` |
+| `test-installer.sh` | Kit d'installation + bundle Calamares |
+| `test-live-usb.sh` | ISO hybride + script de flash + vérification |
+| `test-login.sh` | Chaîne login : `shark`/`shark`, PAM, autologin |
+| `test-wizard.sh` | Wizard Python (syntaxe, autologin, validation) |
+| `test-boot.sh` 🖥️ | **Test sur système réel** — voir ci-dessous |
 
-### 🖥️ Test sur système réel — `test-boot.sh` (boot, Calamares, Wi-Fi)
+### 🖥️ Test sur système réel (`test-boot.sh`)
 
-Tous les tests ci-dessus sont **statiques** (grep / `bash -n`). Le seul qui valide le **vrai artefact** est `test-boot.sh` : il exécute l'ISO construite et vérifie réellement :
-
-1. **Taille** : l'ISO fait-elle < 2 Go ?
-2. **Boot réel QEMU** : kernel + initrd + squashfs extraits de l'ISO, boot complet en console série → kernel démarre, `Reached target Graphical Interface`, LightDM, **autologin shark**, NetworkManager.
-3. **Contenu réel du squashfs** : bundle Calamares + `sharkos-installer` + setup-wizard shipés, firmware Wi-Fi (iwlwifi/realtek/atheros), UFW actif, AppArmor, sysctl durci, autologin shark, police MiSans.
+Le seul test qui valide le **vrai artefact** : il boote l'ISO construite dans **QEMU** et vérifie réellement le kernel, `Reached target Graphical Interface`, LightDM, **l'autologin `shark`**, NetworkManager, puis inspecte le contenu du squashfs (bundle Calamares, installer, firmware Wi-Fi, UFW, AppArmor, MiSans). Lancé **automatiquement en CI après chaque build**.
 
 ```bash
-# Sans ISO → SKIP (la suite reste verte, statut jaune affiché)
-bash tests/run-all.sh
-
-# Après un build, test réel complet (aucun root requis — e2fsprogs suffit) :
 sudo bash tests/test-boot.sh iso-build/SharkOS-Dragon-Edition.iso
-# prérequis outils : apt install qemu-system-x86 e2fsprogs squashfs-tools xorriso
+# prérequis : qemu-system-x86 e2fsprogs squashfs-tools xorriso
 ```
 
-Le code de sortie `3` = SKIP (pas d'ISO / outils absents), `0` = validé sur système réel, `1` = échec réel. En CI, `build-iso.yml` lance ce test **automatiquement après chaque build**.
+Sans ISO → statut `SKIP` (la suite reste verte).
 
 ---
 
 ## 🛠️ Build complet
 
-### Prérequis host (Debian 12 / Ubuntu 22.04+)
+### Prérequis (Debian 12 / Ubuntu 22.04+)
 
 ```bash
-sudo apt update
 sudo apt install -y live-build squashfs-tools xorriso isolinux \
-                   syslinux-utils syslinux-common genisoimage \
-                   git curl wget ca-certificates debootstrap rsync \
-                   dconf-cli imagemagick zstd
+  syslinux-utils syslinux-common genisoimage debootstrap \
+  git curl wget ca-certificates rsync imagemagick zstd
 ```
 
 ### Étapes
@@ -304,23 +221,50 @@ sudo apt install -y live-build squashfs-tools xorriso isolinux \
 ```bash
 # 1. Valider
 bash tests/run-all.sh
-bash scripts/simulate-build.sh
 
-# 2. Bootstrap (prépare iso-build/)
+# 2. Bootstrap (prépare iso-build/) — ~1 min
 sudo bash scripts/00-bootstrap.sh
 
-# 3. Build ISO (20–60 min selon réseau)
+# 3. Build ISO — 20-60 min selon le réseau
 sudo bash scripts/01-build-iso.sh
-# → produit : iso-build/SharkOS-Dragon-Edition.iso (+ .sha256)
+# → iso-build/SharkOS-Dragon-Edition.iso (+ .sha256)
 
-# 4. Logs en cours
-tail -f /tmp/sharkos-build.log
-
-# 5. Tester en VM
+# 4. Tester en VM
 qemu-system-x86_64 -m 2048 -cdrom iso-build/SharkOS-Dragon-Edition.iso -boot d
 
-# 6. Flasher (⚠ MANUEL — vérifier /dev/sdX avec `lsblk`)
-sudo bash scripts/02-flash-usb.sh /dev/sdX
+# 5. Vérifier puis flasher
+sudo bash scripts/03-verify-iso.sh
+sudo bash scripts/02-flash-usb.sh /dev/sdX   # ⚠ vérifier /dev/sdX avec lsblk
+```
+
+---
+
+## 📀 Installation sur disque
+
+Depuis la session Live, le menu Welcome ou un terminal :
+
+```bash
+# Assistant graphique (recommandé) — clavier, compte, autologin
+sudo sharkos-setup-wizard
+
+# Installateur CLI avancé
+sudo sharkos-installer /dev/sda                          # interactif
+sudo sharkos-installer /dev/nvme0n1 --yes --filesystem btrfs --reboot
+```
+
+**Phases** : validation disque → partitionnement GPT (EFI 260 MiB + root) → formatage → `debootstrap` bookworm → cycle des hooks 10→60 dans le chroot → GRUB UEFI+BIOS → identifiants `shark`/`shark` → reboot.
+
+---
+
+## ⚙️ CI / CD
+
+| Workflow | Trigger | Rôle |
+|---|---|---|
+| `ci.yml` | push / PR sur `main` | Lint ShellCheck, structure, features, hooks Debian, configs |
+| `build-iso.yml` | push tag `v*` | Build complet + **test QEMU réel** + upload ISO/SHA256 + GitHub Release |
+
+```bash
+git tag v3.0.5 && git push origin v3.0.5   # déclenche le build
 ```
 
 ---
@@ -329,173 +273,30 @@ sudo bash scripts/02-flash-usb.sh /dev/sdX
 
 | Statut | Étape | Détail |
 |---|---|---|
-| ✅ | **v2.0 Dragon** | XanMod + ZRAM + BBR + governor + Dracula + 25 shark-* |
-| ✅ | Tests automatisés | `tests/run-all.sh` |
-| ✅ | LightDM autologin  | bureau direct |
-| ✅ | Plymouth + GRUB     | branding utilisateur |
-| 🚧 | v2.1 Hydra          | iwd + NetworkManager GUI custom + multi-langue à l'install |
-| 🚧 | v3.0 Apex           | Wayland (Wayfire + wf-panel-pi) + Calamares installer dans l'ISO |
-| 💭 | À étudie           | intégration Flatpak Steam/Discord automatisée au first-boot |
+| ✅ | v3.0 | Design HyperOS 6.0, ISO < 2 Go, sécurité durcie, test QEMU réel |
+| 🚧 | v3.1 | iwd + gestionnaire réseau graphique custom |
+| 🚧 | v4.0 | Wayland (Wayfire + wf-panel-pi), Calamares dans l'ISO |
+| 💭 | — | Flatpak Steam/Discord automatisé au premier boot |
 
 ---
-
-
-
-## 🛠️ Installation depuis la session Live (Calamares + sharkos-installer)
-
-Depuis le menu Welcome au premier boot (ou depuis un terminal) :
-- **Calamares** (si inclus) : `sudo shark-thin` ou clic sur "Installer sur disque" → interface graphique 13 modules Debian.
-- **sharkos-installer** (inclus en permanence : `/usr/local/bin/sharkos-installer`) :
-  ```bash
-  sudo sharkos-installer /dev/sda            # interactive (root ou nom utilisateur shark)
-  sudo sharkos-installer /dev/nvme0n1 --yes --filesystem btrfs --reboot
-  sudo sharkos-installer /dev/sdc --hostname shark-lab --username shark --password shark
-  ```
-
-Phases :
-1. **Validation disque** (affichage taille/modèle, double confirmation "OUI")
-2. **Partitionnement GPT** (EFI 260 MiB + root ext4 ou btrfs)
-3. **Formatage** (vfat + ext4/btrfs selon choix)
-4. **debootstrap bookworm** (base Debian minimale)
-5. **Bind-mounts + rsync du repo** dans /tmp/sharkos-build
-6. **Cycle des hooks 10→60** dans le chroot (`sharkos-install-cycle.sh`)
-7. **GRUB install UEFI + BIOS** (fallback legacy)
-8. **Identifiants shark/shark** + `sudo NOPASSWD`
-9. **fstab UUID** + reboot optionnel
-
-## ⚙️ CI/CD (`.github/workflows/`)
-
-| Workflow | Trigger | Durée | Sortie |
-|---|---|---|---|
-| `ci.yml` | push/PR main | ~3 min | status ✅/❌ — lint, structure, hooks Debian, configs |
-| `build-iso.yml` *(nouveau)* | push tag `v*` | ~40 min | ISO `SharkOS-Dragon-Edition.iso` + `.sha256` artifact, GitHub Release |
-
-Déclencher un build ISO depuis l'UI GitHub Actions : onglet Actions → "Run workflow" → cocher `full_build`.
-
-## 📝 `tests/run-all.sh`
-
-```
-🦈 Test syntax — bash -n sur tous les scripts .sh
-🦈 Test assets — fichiers critiques du projet
-🦈 Test configs — XML, plank, .zshrc
-🦈 Test hooks — cohérence chroot ↔ bootstrap ↔ simulate
-🦈 Test aliases — couverture shark-* canoniques
-🦈 Test installer — présence scripts/sharkos-installer + cycle + intégration Calamares
-```
-
-Chaque test rapporte PASS/FAIL avec code couleur. La suite complète tourne en <5 s sans sudo.
 
 ## 🔐 Sécurité & éthique
 
-SharkOS embarque des outils offensifs `aircrack-ng`, `hydra`, `john`, etc. **à but éducatif** uniquement. L'utilisateur est responsable du respect des lois locales. Activez les profils UFW systématiquement avec `shark-firewall paranoid` sur les machines de production.
-
-## 🛡️ Crédits & inspirations
-
-* [Garuda Linux](https://garudalinux.org) — performance & sysctl tuning
-* [Xubuntu](https://xubuntu.org) — XFCE defaults
-* [Dracula Theme](https://draculatheme.com) — palette
-* [Vinceliuice](https://github.com/vinceliuice) — WhiteSur-Dark GTK & icons
-* [Catppuccin](https://github.com/catppuccin/cursors) — curseurs
-* [live-build](https://wiki.debian.org/DebianLive) — le socle Debian
-
-## 📜 Licence
-
-MIT — voir [LICENSE](LICENSE) (à ajouter au repo).
+SharkOS embarque des outils offensifs (`aircrack-ng`, `hydra`, `john`…) **à but éducatif** uniquement — l'utilisateur reste responsable du respect des lois locales. En production, activez systématiquement les profils UFW via `shark-firewall paranoid`.
 
 ---
 
-<div align="center">
+## 🛡️ Crédits & inspirations
 
-**
+* 🎨 **[Xiaomi HyperOS](https://hyperos.mi.com)** — design system : glassmorphism, MiSans, coins arrondis, widgets, animations
+* [Garuda Linux](https://garudalinux.org) — performance & tuning sysctl
+* [Xubuntu](https://xubuntu.org) — fondations XFCE
+* [Dracula Theme](https://draculatheme.com) — palette (fallback) · [Catppuccin](https://catppuccin.com) — curseurs
+* [Vinceliuice](https://github.com/vinceliuice) — WhiteSur-Light GTK & icônes
+* [live-build](https://wiki.debian.org/DebianLive) — le socle Debian
 
-## 🛡️ Live USB — Verified bootable
+> ℹ️ *HyperOS et MiSans sont des marques de Xiaomi. SharkOS est un projet indépendant, non affilié à Xiaomi : il s'inspire du language de design public d'HyperOS.*
 
-L'ISO SharkOS est générée avec `--binary-images iso-hybrid` (live-build) +
-compression zstd + El Torito BIOS/EFI catalog, ce qui la rend immédiatement
-flashable en USB bootable (MBR pour BIOS legacy, GPT pour UEFI).
+## 📜 Licence
 
-### ✅ Verify yourself
-```bash
-# Après le build (en local sur host Debian/Ubuntu)
-bash scripts/03-verify-iso.sh                          # 4 checks indépendants
-# Sortie typique (toutes vertes) :
-#  ✓ SHA256 vérifié
-#  ✓ Hybrid MBR détecté (USB-flashable)
-#  ✓ El Torito catalog présent (2 boot images : BIOS+EFI)
-#  ✓ kernel / initrd / squashfs trouvés
-#  🦈 ISO OK pour Live USB
-```
-
-### 🚀 Flash sur USB
-```bash
-# 1. Identifier la clé (NE PAS SE TROMPER — /dev/sda peut être le disque système!)
-lsblk
-# 2. Démonter toutes les partitions de la clé
-sudo umount /dev/sdX* 2>/dev/null
-# 3. Flasher (double-confirmation "OUI" demandée par le script)
-sudo bash scripts/02-flash-usb.sh /dev/sdX
-# 4. Synchroniser
-sync
-# 5. Retirer la clé, brancher sur la machine cible, booter, sélectionner la clé dans le BIOS
-```
-
-### 🧪 Tester sans flash via QEMU
-```bash
-# KVM accéléré (Linux host avec virtualisation activée)
-qemu-system-x86_64 -m 4096 -smp 4 -enable-kvm \
-  -cdrom iso-build/SharkOS-Dragon-Edition.iso -boot d
-
-# Sans KVM (cross-platform, plus lent)
-qemu-system-x86_64 -m 2048 \
-  -cdrom iso-build/SharkOS-Dragon-Edition.iso -boot d
-```
-
-> 💡 Tu peux QEMU-boot *avant* de flasher pour vérifier que l'ISO démarre
-> proprement (boot logo, autologin shark sur XFCE Dragon Edition).
-
-
-
-## 🏷️ CI déclenchée par tag (`build-iso.yml`)
-
-Pour déclencher une build ISO complète en GitHub Actions et publier un
-release public :
-
-```bash
-git tag -a v2.0.1 -m "SharkOS Dragon Edition v2.0.1"
-git push origin v2.0.1
-# → onglet Actions : "Build SharkOS Dragon Edition ISO" tourne ~40 min
-# → artifact téléchargeable : SharkOS-Dragon-Edition.iso + .sha256
-# → GitHub Release créé automatiquement avec l'ISO attaché
-```
-
-> Le trigger est `tags: ['v*.*', 'v*']`. Le workflow passe d'abord
-> `bash tests/run-all.sh` puis build via Docker Debian Bookworm, puis
-> publie ISO + SHA256 sur la release.
-
-
-
-## 🦈 Calamares UI (Dracula polish)
-
-L'installateur graphique Calamares est livré avec un branding Dracula
-complet : palette `#0d0221` / `#e94560` / `#bd93f9` sur **tous** les
-widgets Qt, intro HTML, sidebar dynamique, logo multi-tailles (16/32/64/128/256/512).
-
-Fichiers livrés (dans `config/calamares/`) :
-- `settings.conf` — séquence des 13 modules Debian Calamares
-- `branding/sharkos.qss` — stylesheet Dracula (~150 lignes)
-- `branding/sharkos.desc` — métadonnées du branding
-- `branding/intro.html` — splash de bienvenue
-- `branding/sidebar.html` — panneau latéral live avec step counter
-- `branding/sharkos-logo-{16,32,64,128,256,512}.png` — logos multi-tailles
-- `branding/calamares-splash.png` — image 1920×1080
-- `modules/sharkos-install-cycle.conf` — module custom qui relance hooks 10→60
-
-Ces fichiers sont installés par `chroot-hooks/60-sharkos-polish.sh` dans
-`/etc/calamares/sharkos/` lors du build ISO, puis actifs quand l'utilisateur
-lance `calamares-sharkos-thick` depuis le menu Welcome ou `shark-thin` depuis
-n'importe quel terminal.
-
-🦈 Rapide. Furtif. Létal.**
-*i* Performance Garuda. Stabilité Debian. Arsenal Kali. Élégance Dark.
-
-</div>
+MIT — voir `LICENSE`.
