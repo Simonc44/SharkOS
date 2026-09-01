@@ -41,13 +41,15 @@ lb clean 2>/dev/null || true
 # =============================================================================
 echo "[3/6] Config live-build Garuda-style..."
 # NB CRITIQUE : live-build d'Ubuntu (runner CI 22.04) a des défauts Ubuntu
-# qui n'existent PAS dans Debian → erreurs "Unable to locate package".
-#   • kernel   : --linux-packages linux (→ linux-generic) : on force Debian
-#   • initram  : --initramfs casper (→ casper) : on force live-boot
+# qui n'existent PAS dans Debian → erreurs "Unable to locate package"
+# (linux-generic, casper, live-config-upstart…). On FORCE les valeurs Debian :
+#   • kernel    : --linux-packages linux-image + flavour amd64  (=linux-image-amd64)
+#   • initramfs : --initramfs live-boot (sinon casper d'Ubuntu)
+#   • initsystem: --initsystem systemd (sinon upstart + live-config-upstart)
 # La CONCATÉNATION paquet+flavour de live-build donne "linux-image"+"amd64"
 # = linux-image-amd64 (NE PAS écrire linux-image-amd64 → -amd64-amd64).
-# NB : l'option s'appelle --initramfs (valeur none|live-boot) et NON
-# --linux-initramfs (lb config Ubuntu: "unrecognized option").
+# NB : l'option s'appelle --initramfs et NON --linux-initramfs (lb config
+# Ubuntu : "unrecognized option").
 lb config \
   --architectures amd64 \
   --distribution bookworm \
@@ -66,6 +68,7 @@ lb config \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
   --initramfs "live-boot" \
+  --initsystem "systemd" \
   --iso-application "SharkOS Dragon Edition" \
   --iso-publisher "SharkOS Project" \
   --iso-volume "SHARKOS_DRAGON" \
