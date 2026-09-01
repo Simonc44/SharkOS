@@ -1,7 +1,10 @@
 # 🦈 SharkOS — .gitignore
 
 # ── Build live-build ────────────────────────────────────────
-iso-build/
+# NB : iso-build/ doit EXISTER dans le checkout CI (test-assets le vérifie) —
+# on ignore son contenu mais on tracke le .gitkeep.
+iso-build/*
+!iso-build/.gitkeep
 *.iso
 *.iso.sha256
 *.build.log
