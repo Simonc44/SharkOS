@@ -1,0 +1,135 @@
+# =============================================================================
+# 🦈 SharkOS — build-iso.yml
+# Construit l'ISO Dragon Edition quand un tag v* est poussé, ou via
+# workflow_dispatch manuel. Upload artifact + GitHub Release.
+# Stratégie : build NATIF sur le runner Ubuntu 22.04 (pas de docker = pas de
+# masquage d'exit code ni de stdin/heredoc fragile).
+# =============================================================================
+
+name: 🏗️ Build SharkOS Dragon Edition ISO
+
+on:
+  push:
+    tags:
+      - 'v*.*'
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      target_disk_label:
+        description: 'Volume label ISO (par défaut : SHARKOS_DRAGON)'
+        required: false
+        default: 'SHARKOS_DRAGON'
+
+permissions:
+  contents: write   # requis pour créer la GitHub Release
+
+jobs:
+  # ===========================================================================
+  # BUILD ISO COMPLET — push tag ou dispatch manuel
+  # ===========================================================================
+  build-iso:
+    name: "🏗️ Build ISO Dragon Edition"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🧹 Tests statiques (rapide, <5s)
+        run: bash tests/run-all.sh
+
+      - name: 🐧 Installer les outils live-build (host natif)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            live-build debootstrap squashfs-tools xorriso isolinux \
+            syslinux-utils syslinux-common genisoimage \
+            imagemagick git curl wget ca-certificates rsync \
+            lsb-release zstd sudo
+
+      - name: 🎨 Générer wallpaper PNG (pas de SVG convert en sandbox CI)
+        run: |
+          mkdir -p wallpapers
+          convert -size 1920x1080 gradient:"#0d0221-#1a0a2e" \
+            -font DejaVu-Sans-Bold -pointsize 80 \
+            -fill "rgba(233,69,96,0.85)" -gravity center \
+            -annotate +0-40 "SharkOS Dragon" \
+            -pointsize 20 -fill "#f8f8f2" \
+            -annotate +0+60 "Rapide. Furtif. Letal." \
+            wallpapers/sharkos-wall.png || true
+          ls -la wallpapers/
+
+      - name: 🚀 Bootstrap environnement live-build
+        run: sudo bash scripts/00-bootstrap.sh
+
+      - name: 🏗️ Construire l'ISO (peut prendre 30-60 min)
+        run: sudo bash scripts/01-build-iso.sh
+
+      - name: 📦 Vérifier ISO + checksum
+        id: iso-check
+        run: |
+          set -euo pipefail
+          ISO=$(ls iso-build/SharkOS-Dragon-Edition.iso 2>/dev/null || true)
+          if [[ -z "$ISO" || ! -f "$ISO" ]]; then
+            echo "❌ ISO non trouvée dans iso-build/"
+            find iso-build -type f -name "*.iso" 2>&1 | head || true
+            exit 1
+          fi
+          echo "ISO_PATH=$ISO" >> "$GITHUB_OUTPUT"
+          ISO_SIZE=$(du -sh "$ISO" | cut -f1)
+          echo "ISO_SIZE=$ISO_SIZE" >> "$GITHUB_OUTPUT"
+          sha256sum "$ISO" | tee "$ISO.sha256"
+          echo "✅ ISO : $ISO ($ISO_SIZE)"
+
+      - name: 🖥️ Test SYSTÈME RÉEL (boot QEMU + Calamares + Wi-Fi + contenu)
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 e2fsprogs
+          sudo bash tests/test-boot.sh iso-build/SharkOS-Dragon-Edition.iso
+
+      - name: 📤 Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SharkOS-Dragon-Edition-iso
+          path: |
+            iso-build/SharkOS-Dragon-Edition.iso
+            iso-build/SharkOS-Dragon-Edition.iso.sha256
+          retention-days: 30
+
+      # ----- GitHub Release uniquement sur tag push ----------------
+      - name: 🚀 Créer GitHub Release (tags uniquement)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "🦈 SharkOS ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            iso-build/SharkOS-Dragon-Edition.iso
+            iso-build/SharkOS-Dragon-Edition.iso.sha256
+          body: |
+            # 🦈 SharkOS Dragon Edition
+
+            **Performance Garuda. Arsenal Kali. Élégance Dark.**
+
+            | Item | Valeur |
+            |---|---|
+            | Version | ${{ github.ref_name }} |
+            | Build SHA | ${{ github.sha }} |
+            | Flavor | Dragon Edition |
+            | Login par défaut | `shark` / `shark` |
+
+            ## 🚀 Démarrage rapide
+            1. Téléchargez l'ISO + le `.sha256`
+            2. Vérifiez : `sha256sum -c SharkOS-Dragon-Edition.iso.sha256`
+            3. Flashez : `sudo bash scripts/02-flash-usb.sh /dev/sdX` ou utilisez balenaEtcher
+            4. Bootez, autologin shark, lancez `shark-thin` depuis le menu Welcome
+
+            ## ⚠️ Avertissement
+            SharkOS embarque des outils offensifs (`aircrack-ng`, `hydra`, …). **À but éducatif uniquement.**
+            Activez `shark-firewall paranoid` sur toute machine de production.
+
+            — SharkOS Project

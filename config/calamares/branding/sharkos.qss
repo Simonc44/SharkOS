@@ -1,0 +1,246 @@
+/* =============================================================================
+   🦈 SharkOS Dragon Edition — Calamares QSS stylesheet
+   Palette Dracula violet-rouge — 8px rounded cards, 1px borders, no Qt-default
+   system theme bleed.
+   ============================================================================= */
+
+/* ── Base : tous les widgets héritent des couleurs SharkOS ─────────── */
+QWidget {
+    background-color: #0d0221;
+    color: #eefaf8;
+    font-family: "JetBrains Mono", "DejaVu Sans Mono", "Hack", monospace;
+    font-size: 14px;
+    selection-background-color: #bd93f9;
+    selection-color: #0d0221;
+}
+QToolTip {
+    background-color: #1a1b2e;
+    color: #eefaf8;
+    border: 1px solid #e94560;
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+/* ── Step / View sidebar : panneau Dracula ─────────────────────────── */
+#stepWidget, #viewWidget, QStackedWidget, QListView {
+    background-color: #1a1b2e;
+    border: 1px solid #3d3d6b;
+    border-radius: 8px;
+}
+QListView::item:selected {
+    background-color: #e94560;
+    color: #ffffff;
+    border-radius: 4px;
+}
+QListView::item:hover {
+    background-color: #282a4a;
+}
+QListView::item {
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+
+/* ── Buttons (Dracula gradient, hover lighter, pressed inverse) ───── */
+QPushButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #e94560, stop:1 #b02040);
+    color: #ffffff;
+    border: 1px solid #ffffff33;
+    border-radius: 8px;
+    padding: 8px 24px;
+    font-weight: 700;
+    min-height: 28px;
+}
+QPushButton:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #ff6080, stop:1 #d03060);
+    border: 1px solid #ffffff66;
+}
+QPushButton:pressed {
+    background-color: #50fa7b;
+    color: #0d0221;
+    border: 1px solid #50fa7b;
+}
+QPushButton:disabled {
+    background-color: #1a1b2e;
+    color: #3d3d6b;
+    border: 1px solid #3d3d6b;
+}
+QPushButton#quitButton, QPushButton#cancelButton {
+    background-color: transparent;
+    color: #ff5555;
+    border: 1px solid #ff5555;
+    font-weight: 600;
+}
+QPushButton#quitButton:hover, QPushButton#cancelButton:hover {
+    background-color: #ff5555;
+    color: #ffffff;
+}
+
+/* ── Form inputs (textfield, combobox, spinbox) ───────────────────── */
+QLineEdit, QComboBox, QSpinBox, QPlainTextEdit {
+    background-color: #1a1b2e;
+    color: #eefaf8;
+    border: 1px solid #3d3d6b;
+    border-radius: 8px;
+    padding: 6px 12px;
+}
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QPlainTextEdit:focus {
+    border: 1px solid #e94560;
+}
+QLineEdit:disabled, QComboBox:disabled {
+    color: #3d3d6b;
+    border-color: #282a4a;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+/* ── Progress bar (chunk MUST share border-radius with groove) ────── */
+QProgressBar {
+    background-color: #1a1b2e;
+    border: 1px solid #3d3d6b;
+    border-radius: 8px;
+    text-align: center;
+    color: #eefaf8;
+    min-height: 22px;
+}
+QProgressBar::chunk {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #e94560, stop:1 #bd93f9);
+    border-radius: 8px;
+    margin: 0;
+}
+
+/* ── Tree / List views (disk partitions, summary) ─────────────────── */
+QTreeView, QTableView {
+    background-color: #1a1b2e;
+    alternate-background-color: #0d0221;
+    border: 1px solid #3d3d6b;
+    border-radius: 8px;
+    gridline-color: #3d3d6b;
+    selection-background-color: #bd93f9;
+    selection-color: #0d0221;
+}
+QTreeView::item, QTableView::item {
+    padding: 4px 8px;
+    border: 0;
+}
+QTreeView::item:selected, QTableView::item:selected {
+    background-color: #bd93f9;
+    color: #0d0221;
+}
+QHeaderView::section {
+    background-color: #0d0221;
+    color: #e94560;
+    padding: 6px 10px;
+    border: 0;
+    border-bottom: 1px solid #e94560;
+    font-weight: 700;
+}
+
+/* ── Checkboxes / Radio buttons ───────────────────────────────────── */
+QCheckBox, QRadioButton {
+    color: #eefaf8;
+    spacing: 8px;
+}
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #3d3d6b;
+    background: #1a1b2e;
+    border-radius: 4px;
+}
+QRadioButton::indicator {
+    border-radius: 9px;
+}
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background: #e94560;
+    border: 1px solid #e94560;
+}
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border: 1px solid #e94560;
+}
+
+/* ── Scrollbars (slim, Dracula handle) ─────────────────────────────── */
+QScrollBar:vertical {
+    background: #0d0221;
+    width: 10px;
+    margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: #3d3d6b;
+    border-radius: 4px;
+    min-height: 40px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #bd93f9;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+QScrollBar:horizontal {
+    background: #0d0221;
+    height: 10px;
+    margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background: #3d3d6b;
+    border-radius: 4px;
+    min-width: 40px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #bd93f9;
+}
+
+/* ── GroupBox / Frames ────────────────────────────────────────────── */
+QGroupBox {
+    border: 1px solid #3d3d6b;
+    border-radius: 8px;
+    margin-top: 14px;
+    padding: 10px;
+    color: #bd93f9;
+    font-weight: 700;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 6px;
+}
+
+/* ── Labels spéciaux ──────────────────────────────────────────────── */
+QLabel[role="title"] {
+    color: #e94560;
+    font-size: 22px;
+    font-weight: 700;
+}
+QLabel[role="subtitle"] {
+    color: #bd93f9;
+    font-size: 14px;
+}
+QLabel[role="status"] {
+    color: #50fa7b;
+    font-weight: 700;
+}
+QLabel[role="warning"] {
+    color: #ff5555;
+    font-weight: 700;
+}
+
+/* ── Menus ───────────────────────────────────────────────────────── */
+QMenu {
+    background-color: #1a1b2e;
+    color: #eefaf8;
+    border: 1px solid #3d3d6b;
+    border-radius: 6px;
+    padding: 4px;
+}
+QMenu::item {
+    padding: 6px 16px;
+    border-radius: 4px;
+}
+QMenu::item:selected {
+    background-color: #e94560;
+    color: #ffffff;
+}

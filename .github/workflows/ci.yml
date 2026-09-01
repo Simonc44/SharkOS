@@ -1,0 +1,398 @@
+# =============================================================================
+# 🦈 SharkOS — GitHub Actions CI/CD Dragon Edition
+# Inspiré Garuda Linux : vérification kernel, zram, gaming, dracula, powerlevel10k
+# =============================================================================
+
+name: 🦈 SharkOS CI — Dragon Edition
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      full_build:
+        description: 'Lancer une build ISO complète (lente ~40 min)'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+
+  # ===========================================================================
+  # JOB 1 — LINT SHELL (ShellCheck)
+  # ===========================================================================
+  lint-shell:
+    name: "🔍 Lint Shell (ShellCheck)"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer ShellCheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: ShellCheck — scripts/
+        run: |
+          shellcheck --severity=warning \
+            scripts/00-bootstrap.sh \
+            scripts/01-build-iso.sh \
+            scripts/02-flash-usb.sh
+          echo "✅ scripts/ OK"
+
+      - name: ShellCheck — chroot-hooks/
+        run: |
+          shellcheck --severity=warning \
+            chroot-hooks/10-install-tools.sh \
+            chroot-hooks/20-apply-theme.sh \
+            chroot-hooks/30-configure-shell.sh \
+            chroot-hooks/40-cleanup.sh \
+            chroot-hooks/50-sharkos-finalize.sh \
+            chroot-hooks/60-sharkos-polish.sh
+          echo "✅ chroot-hooks/ OK"
+
+  # ===========================================================================
+  # JOB 2 — STRUCTURE + FEATURES GARUDA
+  # Vérifie que tous les éléments Dragon Edition sont bien présents
+  # ===========================================================================
+  check-structure:
+    name: "📁 Structure + Features Dragon Edition"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier fichiers obligatoires
+        run: |
+          MISSING=0
+          check_file() {
+            [[ -f "$1" ]] && echo "  ✅ $1" || { echo "  ❌ MANQUANT : $1"; MISSING=$((MISSING+1)); }
+          }
+          check_dir() {
+            [[ -d "$1" ]] && echo "  ✅ $1/" || { echo "  ❌ DOSSIER MANQUANT : $1"; MISSING=$((MISSING+1)); }
+          }
+          echo "--- Scripts ---"
+          check_file "scripts/00-bootstrap.sh"
+          check_file "scripts/01-build-iso.sh"
+          check_file "scripts/02-flash-usb.sh"
+          check_file "scripts/simulate-build.sh"
+          echo "--- Hooks chroot ---"
+          check_file "chroot-hooks/10-install-tools.sh"
+          check_file "chroot-hooks/20-apply-theme.sh"
+          check_file "chroot-hooks/30-configure-shell.sh"
+          check_file "chroot-hooks/40-cleanup.sh"
+          check_file "chroot-hooks/50-sharkos-finalize.sh"
+          check_file "chroot-hooks/60-sharkos-polish.sh"
+          echo "--- Scripts installateur ---"
+          check_file "scripts/sharkos-installer"
+          check_file "scripts/sharkos-install-cycle.sh"
+          check_file "scripts/03-verify-iso.sh"
+          echo "--- Config Dragon ---"
+          check_file "config/garuda-packages.list"
+          check_file "config/performance-tweaks.conf"
+          echo "--- Documentation ---"
+          check_file "README.md"
+          check_file "INSTRUCTIONS.md"
+          echo "--- Dossiers ---"
+          check_dir "wallpapers"
+          check_dir ".github/workflows"
+          [[ $MISSING -eq 0 ]] && echo "✅ Structure complète" || { echo "❌ $MISSING fichier(s) manquant(s)"; exit 1; }
+
+      - name: Vérifier features GARUDA dans hook 10 (kernel, zram, gaming)
+        run: |
+          HOOK="chroot-hooks/10-install-tools.sh"
+          FAIL=0
+          check() {
+            grep -q "$1" "$HOOK" && echo "  ✅ $1" || { echo "  ❌ ABSENT : $1"; FAIL=$((FAIL+1)); }
+          }
+          echo "--- Kernel XanMod (succède à Liquorix sur Debian) ---"
+          check "xanmod"
+          check "linux-xanmod-lts"
+          echo "--- Zram ---"
+          check "zram"
+          check "zstd"
+          echo "--- Gaming Stack (optionnelle via shark-extras — ISO < 2 Go) ---"
+          grep -q "gamemode" "chroot-hooks/50-sharkos-finalize.sh" && echo "  ✅ gamemode (shark-extras)" || { echo "  ❌ ABSENT : gamemode"; FAIL=$((FAIL+1)); }
+          grep -q "mangohud" "chroot-hooks/50-sharkos-finalize.sh" && echo "  ✅ mangohud (shark-extras)" || { echo "  ❌ ABSENT : mangohud"; FAIL=$((FAIL+1)); }
+          grep -q "lutris" "chroot-hooks/50-sharkos-finalize.sh" && echo "  ✅ lutris (shark-extras)" || { echo "  ❌ ABSENT : lutris"; FAIL=$((FAIL+1)); }
+          grep -q "sharkgame" "chroot-hooks/10-install-tools.sh" && echo "  ✅ sharkgame (hook 10)" || { echo "  ❌ ABSENT : sharkgame"; FAIL=$((FAIL+1)); }
+          echo "--- Outils sécu grade Kali ---"
+          check "aircrack"
+          check "hashcat"
+          check "hydra"
+          check "sqlmap"
+          echo "--- Flatpak (pas Snap) ---"
+          check "flatpak"
+          check "flathub"
+          echo "--- Btrfs + Snapper ---"
+          check "btrfs"
+          check "snapper"
+          echo "--- Powerlevel10k ---"
+          check "powerlevel10k"
+          echo "--- Fastfetch ---"
+          check "fastfetch"
+          echo "--- Sécurité maximale ---"
+          grep -q "kernel.dmesg_restrict = 1" "$HOOK" && echo "  ✅ hardening sysctl" || { echo "  ❌ ABSENT : dmesg_restrict"; FAIL=$((FAIL+1)); }
+          grep -q "ufw default deny incoming" "chroot-hooks/40-cleanup.sh" && echo "  ✅ UFW deny-incoming" || { echo "  ❌ ABSENT : UFW"; FAIL=$((FAIL+1)); }
+          grep -q "apparmor" "chroot-hooks/40-cleanup.sh" && echo "  ✅ AppArmor" || { echo "  ❌ ABSENT : AppArmor"; FAIL=$((FAIL+1)); }
+          grep -q "mitigations=on" "scripts/00-bootstrap.sh" && echo "  ✅ boot mitigations" || { echo "  ❌ ABSENT : mitigations"; FAIL=$((FAIL+1)); }
+          [[ $FAIL -eq 0 ]] && echo "✅ Toutes les features Garuda + sécurité présentes" || { echo "❌ $FAIL feature(s) manquante(s)"; exit 1; }
+
+      - name: Vérifier Dracula + Papirus dans hook 20
+        run: |
+          HOOK="chroot-hooks/20-apply-theme.sh"
+          FAIL=0
+          check() { grep -q "$1" "$HOOK" && echo "  ✅ $1" || { echo "  ❌ ABSENT : $1"; FAIL=$((FAIL+1)); }; }
+          check "Dracula"
+          check "Papirus"
+          check "Kvantum"
+          check "Catppuccin"
+          grep -q "WhiteSur-Light" "$HOOK" && echo "  ✅ WhiteSur-Light (clair HyperOS)" || { echo "  ❌ ABSENT : WhiteSur-Light"; FAIL=$((FAIL+1)); }
+          [[ $FAIL -eq 0 ]] && echo "✅ Thème HyperOS (clair) valide" || { echo "❌ Échec thème"; exit 1; }
+
+      - name: Vérifier Powerlevel10k + Picom blur dans hook 30
+        run: |
+          HOOK="chroot-hooks/30-configure-shell.sh"
+          FAIL=0
+          check() { grep -q "$1" "$HOOK" && echo "  ✅ $1" || { echo "  ❌ ABSENT : $1"; FAIL=$((FAIL+1)); }; }
+          check "powerlevel10k"
+          check "dual_kawase"
+          check "blur-strength"
+          check "corner-radius"
+          check "Dracula"
+          check "Papirus-Dark"
+          check "JetBrains Mono"
+          check "sharkgame"
+          check "shark-update"
+          [[ $FAIL -eq 0 ]] && echo "✅ Shell + Picom Garuda-style valide" || { echo "❌ Échec shell/picom"; exit 1; }
+
+      - name: Vérifier performance-tweaks.conf
+        run: |
+          CONF="config/performance-tweaks.conf"
+          FAIL=0
+          check() { grep -q "$1" "$CONF" && echo "  ✅ $1" || { echo "  ❌ ABSENT : $1"; FAIL=$((FAIL+1)); }; }
+          check "xanmod"
+          check "zram"
+          check "swappiness = 10"
+          check "bbr"
+          check "gamemode"
+          check "mangohud"
+          check "nohang"
+          check "irqbalance"
+          check "bfq"
+          [[ $FAIL -eq 0 ]] && echo "✅ performance-tweaks.conf OK" || { echo "❌ Conf perf incomplète"; exit 1; }
+
+      - name: Vérifier le shebang des hooks
+        run: |
+          for H in chroot-hooks/*.sh; do
+            FIRST=$(head -1 "$H")
+            [[ "$FIRST" == "#!/usr/bin/env bash" ]] && echo "  ✅ $H" || { echo "  ❌ Shebang incorrect : $H ($FIRST)"; exit 1; }
+          done
+
+  # ===========================================================================
+  # JOB 3 — SIMULATION DANS DEBIAN BOOKWORM
+  # ===========================================================================
+  test-hooks-debian:
+    name: "🐧 Test hooks Debian Bookworm"
+    runs-on: ubuntu-22.04
+    container:
+      image: debian:bookworm-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dépendances minimales
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            bash shellcheck git curl wget ca-certificates
+
+      - name: Dry-run hooks (bash -n)
+        run: |
+          for H in chroot-hooks/*.sh; do
+            bash -n "$H" && echo "✅ $H"
+          done
+
+      - name: Dry-run scripts (bash -n)
+        run: |
+          for S in scripts/*.sh scripts/sharkos-installer; do
+            bash -n "$S" && echo "✅ $S"
+          done
+
+      - name: Suite de tests complète (run-all)
+        run: |
+          apt-get install -y --no-install-recommends python3 >/dev/null 2>&1 || true
+          bash tests/run-all.sh
+
+      - name: Vérifier que les commandes de base existent
+        run: |
+          for CMD in bash git curl apt-get dpkg grep awk find chmod; do
+            command -v "$CMD" &>/dev/null && echo "  ✅ $CMD" || echo "  ⚠ $CMD absent (CI slim)"
+          done
+          echo "✅ Check commandes OK"
+
+  # ===========================================================================
+  # JOB 4 — VALIDATION SYSCTL + MOTD + OS-RELEASE
+  # ===========================================================================
+  check-configs:
+    name: "⚙️ Configs sysctl + MOTD + identité"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérifier sysctl dans hook 10
+        run: |
+          HOOK="chroot-hooks/10-install-tools.sh"
+          FAIL=0
+          check() { grep -q "$1" "$HOOK" && echo "  ✅ $1" || { echo "  ❌ $1"; FAIL=$((FAIL+1)); }; }
+          check "vm.swappiness"
+          check "vm.vfs_cache_pressure"
+          check "tcp_congestion_control = bbr"
+          check "tcp_fastopen"
+          check "inotify.max_user_watches"
+          [[ $FAIL -eq 0 ]] && echo "✅ Sysctl OK" || { echo "❌ Sysctl incomplet"; exit 1; }
+
+      - name: Vérifier module BBR chargé au boot (hook 40)
+        run: |
+          HOOK="chroot-hooks/40-cleanup.sh"
+          grep -q "tcp_bbr" "$HOOK" && echo "✅ tcp_bbr dans /etc/modules" \
+            || { echo "❌ tcp_bbr absent du hook 40"; exit 1; }
+
+      - name: Vérifier MOTD Dragon dans hook 40
+        run: |
+          HOOK="chroot-hooks/40-cleanup.sh"
+          grep -q "Dragon Edition" "$HOOK" && echo "✅ MOTD Dragon Edition présent" \
+            || { echo "❌ MOTD Dragon manquant"; exit 1; }
+          grep -q "XanMod" "$HOOK" && echo "✅ Mention XanMod dans MOTD" || true
+          grep -q "Zram" "$HOOK" && echo "✅ Mention Zram dans MOTD" || true
+
+      - name: Vérifier os-release dans hook 30
+        run: |
+          HOOK="chroot-hooks/30-configure-shell.sh"
+          grep -q "Dragon Edition" "$HOOK" && echo "✅ os-release Dragon Edition" \
+            || { echo "❌ os-release non mis à jour"; exit 1; }
+
+      - name: Vérifier bootstrap Garuda-style
+        run: |
+          BS="scripts/00-bootstrap.sh"
+          FAIL=0
+          check() { grep -q "$1" "$BS" && echo "  ✅ $1" || { echo "  ❌ $1"; FAIL=$((FAIL+1)); }; }
+          check "zstd"
+          check "non-free"
+          check "firmware"
+          check "SharkOS-Dragon"
+          [[ $FAIL -eq 0 ]] && echo "✅ Bootstrap Garuda-style OK" || { echo "❌ Bootstrap incomplet"; exit 1; }
+
+  # ===========================================================================
+  # JOB 5 — RAPPORT FINAL
+  # ===========================================================================
+  summary:
+    name: "📊 Rapport CI Dragon Edition"
+    runs-on: ubuntu-22.04
+    needs: [lint-shell, check-structure, test-hooks-debian, check-configs]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rapport
+        run: |
+          echo ""
+          echo "🦈 =========================================================="
+          echo "   SharkOS CI — Dragon Edition"
+          echo "=========================================================="
+          echo "  Commit  : ${{ github.sha }}"
+          echo "  Branche : ${{ github.ref_name }}"
+          echo "  Date    : $(date '+%Y-%m-%d %H:%M UTC')"
+          echo ""
+          echo "  Nouveautés Dragon Edition vérifiées :"
+          echo "    ⚡ Kernel XanMod LTS"
+          echo "    💾 Zram zstd 50%"
+          echo "    🎨 Dracula + Papirus-Dark + Kvantum"
+          echo "    🐚 Powerlevel10k"
+          echo "    🔵 Picom dual_kawase blur"
+          echo "    🎮 GameMode + MangoHud + Lutris"
+          echo "    🛡️  Arsenal : aircrack, hashcat, hydra, sqlmap..."
+          echo "    📂 Btrfs + Snapper"
+          echo "    🌐 BBR + FQ congestion control"
+          echo ""
+          echo "  Jobs :"
+          echo "    🔍 Lint Shell    : ${{ needs.lint-shell.result }}"
+          echo "    📁 Structure     : ${{ needs.check-structure.result }}"
+          echo "    🐧 Test Debian   : ${{ needs.test-hooks-debian.result }}"
+          echo "    ⚙️  Configs sysctl : ${{ needs.check-configs.result }}"
+          echo ""
+          if [[ "${{ needs.lint-shell.result }}" == "success" ]] && \
+             [[ "${{ needs.check-structure.result }}" == "success" ]] && \
+             [[ "${{ needs.test-hooks-debian.result }}" == "success" ]] && \
+             [[ "${{ needs.check-configs.result }}" == "success" ]]; then
+            echo "  🦈 ✅ TOUT OK — SharkOS Dragon Edition prêt à builder !"
+          else
+            echo "  🦈 ❌ Des erreurs détectées — voir les jobs ci-dessus."
+            exit 1
+          fi
+          echo "=========================================================="
+
+  # ===========================================================================
+  # JOB 6 — BUILD ISO COMPLÈTE (manuel uniquement)
+  # ===========================================================================
+  full-iso-build:
+    name: "🏗️ Build ISO Dragon Edition (manuel)"
+    runs-on: ubuntu-22.04
+    needs: [lint-shell, check-structure, test-hooks-debian, check-configs]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.full_build == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wallpaper PNG de test
+        run: |
+          sudo apt-get install -y imagemagick -qq
+          mkdir -p wallpapers
+          convert -size 1920x1080 gradient:'#0d0221-#1a0a2e' \
+            -font DejaVu-Sans-Bold -pointsize 80 \
+            -fill 'rgba(233,69,96,0.8)' -gravity center \
+            -annotate +0-40 'SharkOS Dragon' \
+            -pointsize 20 -fill '#f8f8f2' \
+            -annotate +0+60 'Rapide. Furtif. Letal.' \
+            wallpapers/sharkos-wall.png
+          echo "✅ Wallpaper Dragon généré"
+
+      - name: Build ISO dans container Debian Bookworm
+        run: |
+          WORKDIR="$(pwd)"
+          docker run --rm --privileged \
+            -v "${WORKDIR}:/build" \
+            -w /build \
+            debian:bookworm \
+            bash -c '
+              set -euo pipefail
+              apt-get update -qq
+              apt-get install -y --no-install-recommends \
+                live-build debootstrap squashfs-tools xorriso isolinux \
+                syslinux-utils syslinux-common genisoimage \
+                imagemagick git curl wget ca-certificates rsync lsb-release \
+                sudo
+              echo "✅ live-build : $(live-build --version)"
+              bash scripts/00-bootstrap.sh
+              bash scripts/01-build-iso.sh
+            '
+
+      - name: Vérifier l'ISO
+        run: |
+          ISO=$(ls iso-build/SharkOS-Dragon-Edition.iso 2>/dev/null || ls iso-build/*.iso 2>/dev/null | head -1 || echo "")
+          if [[ -f "${ISO:-}" ]]; then
+            echo "✅ ISO : $ISO ($(du -sh "$ISO" | cut -f1))"
+          else
+            echo "❌ ISO non trouvée"
+            exit 1
+          fi
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: SharkOS-Dragon-${{ github.sha }}
+          path: iso-build/SharkOS-Dragon-Edition.iso
+          retention-days: 7

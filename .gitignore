@@ -1,0 +1,24 @@
+# 🦈 SharkOS — .gitignore
+
+# ── Build live-build ────────────────────────────────────────
+iso-build/
+*.iso
+*.iso.sha256
+*.build.log
+
+# ── Caches Python ───────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Logs & temporaires ─────────────────────────────────────
+*.log
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── CI / environnement local ───────────────────────────────
+.env
+.sharkos-local-*

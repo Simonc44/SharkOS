@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# =============================================================================
+# SharkOS — Lanceur d'autostart de l'assistant d'installation
+# Vérifie si le système est déjà configuré, sinon lance l'assistant macOS style.
+# =============================================================================
+set -euo pipefail
+
+# S'assurer de ne pas tourner si l'utilisateur a déjà complété l'installation
+if [[ -f "$HOME/.config/sharkos-setup-done" ]]; then
+  exit 0
+fi
+
+# S'assurer que DISPLAY est défini (session graphique active)
+if [[ -z "${DISPLAY:-}" ]]; then
+  exit 0
+fi
+
+# Lancer l'assistant graphique en Root tout en préservant l'affichage X11
+sudo env DISPLAY="$DISPLAY" XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}" /usr/local/bin/sharkos-setup-wizard

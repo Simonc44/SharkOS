@@ -1,0 +1,976 @@
+#!/usr/bin/env python3
+# =============================================================================
+# SharkOS — Setup Wizard v4.0 — Liquid Glass, tous bugs corrigés
+# =============================================================================
+import os
+import sys
+import subprocess
+import threading
+import time
+import crypt
+import random
+import string
+
+try:
+    import gi
+    gi.require_version('Gtk', '3.0')
+    gi.require_version('Gdk', '3.0')
+    gi.require_version('GdkPixbuf', '2.0')
+    from gi.repository import Gtk, Gdk, GLib, Pango, GdkPixbuf
+except ImportError:
+    print("[ERREUR] PyGObject manquant : sudo apt install python3-gi gir1.2-gtk-3.0")
+    sys.exit(1)
+
+# =============================================================================
+# CHEMIN DU LOGO
+# =============================================================================
+LOGO_PATHS = [
+    "/usr/share/sharkos/logo.png",
+    "/usr/share/sharkos/sharkos-logo.png",
+    os.path.join(os.path.dirname(__file__), "../wallpapers/sharkos-logo.png"),
+    os.path.join(os.path.dirname(__file__), "../wallpapers/logo.png"),
+]
+
+# =============================================================================
+# CSS — Liquid Glass corrigé
+# Problème principal : les entry/combobox héritaient d'un fond sombre
+# qui rendait le texte invisible. On force tout en blanc.
+# =============================================================================
+CSS = ("""
+/* ── Reset global ─────────────────────────────────────────── */
+* {
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI",
+                 Ubuntu, Roboto, Arial, sans-serif;
+    -gtk-icon-style: regular;
+}
+
+/* ── Fond de la fenêtre ────────────────────────────────────── */
+window {
+    background: #050810;
+}
+
+/* ── Card principale ───────────────────────────────────────── */
+.glass-card {
+    background: rgba(20, 26, 50, 0.80);
+    border-radius: 24px;
+    border-top:   1.5px solid rgba(255, 255, 255, 0.24);
+    border-left:  1.5px solid rgba(255, 255, 255, 0.14);
+    border-right: 1.5px solid rgba(0, 0, 0, 0.30);
+    border-bottom:1.5px solid rgba(0, 0, 0, 0.40);
+    padding: 48px 60px 44px 60px;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        0 40px 80px rgba(0,0,0,0.65),
+        0 8px 32px rgba(26,140,255,0.10);
+}
+
+/* ── Titre principal ───────────────────────────────────────── */
+.title-sharkos {
+    font-size: 42px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -1px;
+}
+
+/* ── Titre de page ─────────────────────────────────────────── */
+.page-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.3px;
+}
+
+/* ── Sous-titres ───────────────────────────────────────────── */
+.subtitle {
+    font-size: 14px;
+    color: rgba(180, 195, 235, 0.80);
+    line-height: 1.6;
+}
+
+/* ── Labels de champ ───────────────────────────────────────── */
+.field-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(100, 175, 255, 1.0);
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+}
+
+/* ── ENTRY — texte TOUJOURS blanc, fond glass visible ─────── */
+entry {
+    background-color: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    border-radius: 12px;
+    border-top:   1px solid rgba(255, 255, 255, 0.22);
+    border-left:  1px solid rgba(255, 255, 255, 0.13);
+    border-right: 1px solid rgba(0, 0, 0, 0.20);
+    border-bottom:1px solid rgba(0, 0, 0, 0.28);
+    padding: 13px 16px;
+    font-size: 15px;
+    font-weight: 400;
+    caret-color: #1a8cff;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.22);
+    min-height: 46px;
+}
+
+entry:focus {
+    background-color: rgba(26, 140, 255, 0.10);
+    border-top-color: rgba(26, 140, 255, 0.70);
+    border-left-color: rgba(26, 140, 255, 0.45);
+    color: #ffffff;
+    box-shadow:
+        inset 0 2px 5px rgba(0,0,0,0.15),
+        0 0 0 3px rgba(26, 140, 255, 0.20),
+        0 0 20px rgba(26, 140, 255, 0.10);
+}
+
+/* placeholder text */
+entry:placeholder {
+    color: rgba(160, 175, 220, 0.45);
+}
+
+entry selection {
+    background-color: #1a8cff;
+    color: #ffffff;
+}
+
+/* ── COMBOBOX — même style que entry ──────────────────────── */
+combobox {
+    background: transparent;
+}
+
+combobox button,
+combobox button.combo {
+    background-color: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    border-radius: 12px;
+    border-top:   1px solid rgba(255, 255, 255, 0.22);
+    border-left:  1px solid rgba(255, 255, 255, 0.13);
+    border-right: 1px solid rgba(0, 0, 0, 0.20);
+    border-bottom:1px solid rgba(0, 0, 0, 0.28);
+    padding: 12px 16px;
+    font-size: 15px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.20);
+    min-height: 46px;
+}
+
+combobox button:hover,
+combobox button.combo:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+/* texte de la cellule dans le bouton */
+combobox button cellview,
+combobox button cellview label,
+combobox cellview,
+combobox cellview label {
+    color: #ffffff;
+    font-size: 15px;
+}
+
+/* menu déroulant */
+.combo window.popup,
+window.popup {
+    background-color: rgba(20, 26, 50, 0.97);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 14px;
+}
+
+.combo window.popup treeview,
+window.popup treeview {
+    background-color: transparent;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 6px;
+}
+
+.combo window.popup treeview row,
+window.popup treeview row {
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: #ffffff;
+}
+
+.combo window.popup treeview row:selected,
+window.popup treeview row:selected {
+    background-color: rgba(26, 140, 255, 0.25);
+    color: #ffffff;
+}
+
+.combo window.popup treeview row:hover,
+window.popup treeview row:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+/* ── Bouton primaire (pill bleu) ──────────────────────────── */
+.btn-primary {
+    background: linear-gradient(180deg,
+        rgba(80, 170, 255, 1.0)  0%,
+        rgba(26, 100, 220, 1.0) 100%);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 50px;
+    padding: 14px 46px;
+    border-top:   1px solid rgba(255,255,255,0.45);
+    border-left:  1px solid rgba(255,255,255,0.25);
+    border-right: 1px solid rgba(0,0,0,0.20);
+    border-bottom:1px solid rgba(0,0,0,0.40);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.35),
+        0 4px 20px rgba(26,100,220,0.55),
+        0 1px 4px rgba(0,0,0,0.30);
+    letter-spacing: 0.2px;
+    min-height: 50px;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(180deg,
+        rgba(100, 190, 255, 1.0)  0%,
+        rgba(50,  125, 240, 1.0) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.45),
+        0 6px 28px rgba(26,100,220,0.70);
+}
+
+.btn-primary:active {
+    background: linear-gradient(180deg,
+        rgba(20,  90, 210, 1.0) 0%,
+        rgba(10,  60, 160, 1.0) 100%);
+}
+
+/* ── Bouton secondaire (ghost pill) ───────────────────────── */
+.btn-secondary {
+    background: rgba(255,255,255,0.07);
+    color: rgba(200,215,245,0.80);
+    font-size: 14px;
+    border-radius: 50px;
+    padding: 13px 30px;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    min-height: 48px;
+}
+
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.12);
+    color: rgba(220,235,255,0.95);
+    border-color: rgba(255,255,255,0.25);
+}
+
+/* ── Bouton œil (toggle password) ────────────────────────── */
+.btn-eye {
+    background: rgba(255,255,255,0.07);
+    color: rgba(160,185,230,0.80);
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.13);
+    padding: 0px 12px;
+    font-size: 16px;
+    min-width: 48px;
+    min-height: 46px;
+}
+
+.btn-eye:hover {
+    background: rgba(255,255,255,0.14);
+    color: #ffffff;
+}
+
+/* ── Labels d'erreur ──────────────────────────────────────── */
+.err-label {
+    color: rgba(255, 90, 100, 0.98);
+    font-size: 12px;
+    font-weight: 500;
+    padding-left: 4px;
+}
+
+/* ── Séparateur glass ─────────────────────────────────────── */
+.glass-sep {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255,255,255,0.15) 30%,
+        rgba(255,255,255,0.22) 50%,
+        rgba(255,255,255,0.15) 70%,
+        transparent 100%
+    );
+    min-height: 1px;
+}
+
+/* ── Dots étapes ──────────────────────────────────────────── */
+.dot-off { color: rgba(255,255,255,0.18); font-size: 8px; }
+.dot-on  { color: #1a8cff;               font-size: 11px;
+           text-shadow: 0 0 10px rgba(26,140,255,0.90); }
+
+/* ── Badge code clavier ───────────────────────────────────── */
+.badge {
+    background: rgba(26,140,255,0.18);
+    border: 1px solid rgba(26,140,255,0.40);
+    border-radius: 20px;
+    color: rgba(100,185,255,1.0);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 18px;
+}
+
+/* ── Chip succès ──────────────────────────────────────────── */
+.chip-ok {
+    background: rgba(48,209,88,0.18);
+    border: 1px solid rgba(48,209,88,0.40);
+    border-radius: 20px;
+    color: rgba(60,220,100,1.0);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 22px;
+}
+
+/* ── Barre de progression ─────────────────────────────────── */
+progressbar trough {
+    background: rgba(255,255,255,0.08);
+    border-radius: 100px;
+    min-height: 5px;
+    border: none;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.30);
+}
+
+progressbar progress {
+    background: linear-gradient(90deg, #1a8cff 0%, #30d158 100%);
+    border-radius: 100px;
+    min-height: 5px;
+    box-shadow: 0 0 12px rgba(26,140,255,0.55);
+}
+""").encode()
+
+KEYBOARDS = [
+    ("🇫🇷  Français — AZERTY",       "fr"),
+    ("🇺🇸  English — US QWERTY",     "us"),
+    ("🇬🇧  English — UK QWERTY",     "gb"),
+    ("🇩🇪  Deutsch — QWERTZ",        "de"),
+    ("🇪🇸  Español — QWERTY",        "es"),
+    ("🇮🇹  Italiano — QWERTY",       "it"),
+    ("🇵🇹  Português — QWERTY",      "pt"),
+    ("🇧🇪  Belge — AZERTY",          "be"),
+    ("🇨🇭  Suisse — QWERTZ",         "ch"),
+]
+
+
+# =============================================================================
+# HELPER : créer un utilisateur et lui définir un mot de passe
+# BUG FIX : on utilise shadow hashing correct + on vérifie l'existence
+# =============================================================================
+def create_user(username, password):
+    """
+    Crée l'utilisateur (s'il n'existe pas) et définit son mot de passe
+    de façon robuste avec chpasswd (évite les bugs de crypt()).
+    """
+    # Vérifier si l'utilisateur existe déjà
+    r = subprocess.run(["id", username], capture_output=True)
+    if r.returncode != 0:
+        # Créer l'utilisateur
+        subprocess.run([
+            "useradd", "-m", "-s", "/bin/bash",
+            "-G", "sudo,audio,video,plugdev,netdev",
+            username
+        ], capture_output=True)
+
+    # Définir le mot de passe via chpasswd (le plus fiable)
+    proc = subprocess.Popen(
+        ["chpasswd"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    out, err = proc.communicate(input=f"{username}:{password}\n".encode())
+
+    # Si chpasswd échoue, tenter avec passwd --stdin
+    if proc.returncode != 0:
+        proc2 = subprocess.Popen(
+            ["passwd", "--stdin", username],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        proc2.communicate(input=f"{password}\n".encode())
+
+    # Fallback ultime : openssl + usermod
+    if proc.returncode != 0:
+        hashed = subprocess.check_output(
+            ["openssl", "passwd", "-6", password]
+        ).decode().strip()
+        subprocess.run(["usermod", "-p", hashed, username], capture_output=True)
+
+    return proc.returncode == 0
+
+
+class Wizard(Gtk.Window):
+
+    def __init__(self):
+        super().__init__(title="SharkOS")
+        self.set_position(Gtk.WindowPosition.CENTER)
+        self.set_resizable(False)
+        self.set_decorated(False)
+        self.fullscreen()
+
+        # CSS
+        prov = Gtk.CssProvider()
+        prov.load_from_data(CSS)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(), prov,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
+
+        self.layout = "fr"
+        self.username = ""
+        self.password = ""
+        self._pulse_active = False
+        self._countdown = 3
+
+        # Fond foncé + overlay glow bleu
+        outer = Gtk.Overlay()
+        self.add(outer)
+
+        bg = Gtk.EventBox()
+        outer.add(bg)
+
+        glow = Gtk.Box()
+        # Léger halo bleu en bas à droite
+        glow.set_halign(Gtk.Align.FILL)
+        glow.set_valign(Gtk.Align.FILL)
+        outer.add_overlay(glow)
+
+        # Centrage
+        center = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        center.set_valign(Gtk.Align.CENTER)
+        center.set_halign(Gtk.Align.CENTER)
+        outer.add_overlay(center)
+
+        self.card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.card.get_style_context().add_class("glass-card")
+        self.card.set_size_request(760, -1)
+        center.pack_start(self.card, False, False, 0)
+
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.stack.set_transition_duration(350)
+        self.card.pack_start(self.stack, True, True, 0)
+
+        self._mk_welcome()
+        self._mk_keyboard()
+        self._mk_user()
+        self._mk_loading()
+        self._mk_done()
+
+        self.stack.set_visible_child_name("welcome")
+        self.show_all()
+
+    # ── Utilitaires ───────────────────────────────────────────────────
+
+    def _logo(self, size=96):
+        for path in LOGO_PATHS:
+            if os.path.exists(path):
+                try:
+                    pb = GdkPixbuf.Pixbuf.new_from_file_at_size(path, size, size)
+                    img = Gtk.Image.new_from_pixbuf(pb)
+                    img.set_halign(Gtk.Align.CENTER)
+                    return img
+                except Exception:
+                    pass
+        # Fallback emoji
+        lbl = Gtk.Label(label="🦈")
+        lbl.modify_font(Pango.FontDescription("Sans 64"))
+        lbl.set_halign(Gtk.Align.CENTER)
+        return lbl
+
+    def _dots(self, active=-1, n=3):
+        box = Gtk.Box(spacing=10)
+        box.set_halign(Gtk.Align.CENTER)
+        for i in range(n):
+            d = Gtk.Label(label="●")
+            d.get_style_context().add_class("dot-on" if i == active else "dot-off")
+            box.pack_start(d, False, False, 0)
+        return box
+
+    def _sep(self):
+        s = Gtk.Box()
+        s.set_size_request(-1, 1)
+        s.get_style_context().add_class("glass-sep")
+        return s
+
+    def _lbl(self, text, cls):
+        l = Gtk.Label(label=text)
+        l.get_style_context().add_class(cls)
+        return l
+
+    def _field_group(self, label_text, widget, err=None):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
+        lbl = Gtk.Label(label=label_text)
+        lbl.get_style_context().add_class("field-label")
+        lbl.set_halign(Gtk.Align.START)
+        box.pack_start(lbl, False, False, 0)
+        box.pack_start(widget, False, False, 0)
+        if err:
+            box.pack_start(err, False, False, 0)
+        return box
+
+    def _nav(self, back=None, fwd=None):
+        box = Gtk.Box(spacing=12)
+        box.set_halign(Gtk.Align.END)
+        if back:
+            b = Gtk.Button(label="← Retour")
+            b.get_style_context().add_class("btn-secondary")
+            b.connect("clicked", back)
+            box.pack_start(b, False, False, 0)
+        if fwd:
+            box.pack_start(fwd, False, False, 0)
+        return box
+
+    def _go(self, name):
+        self.stack.set_visible_child_name(name)
+
+    # ── PAGE 1 : Welcome ─────────────────────────────────────────────
+
+    def _mk_welcome(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+
+        # LOGO EN HAUT AU CENTRE — grand
+        logo = self._logo(size=128)
+        logo.set_margin_bottom(20)
+        box.pack_start(logo, False, False, 0)
+
+        # TITRE "SharkOS" — grand, centré, en haut (après logo)
+        title = self._lbl("SharkOS", "title-sharkos")
+        title.set_halign(Gtk.Align.CENTER)
+        title.set_margin_bottom(16)
+        box.pack_start(title, False, False, 0)
+
+        box.pack_start(self._sep(), False, False, 0)
+
+        sub = self._lbl(
+            "Configurons ton système en 3 étapes simples.\nCela prend moins d'une minute.",
+            "subtitle"
+        )
+        sub.set_justify(Gtk.Justification.CENTER)
+        sub.set_halign(Gtk.Align.CENTER)
+        sub.set_margin_top(20)
+        sub.set_margin_bottom(24)
+        box.pack_start(sub, False, False, 0)
+
+        box.pack_start(self._dots(-1), False, False, 0)
+
+        btn = Gtk.Button(label="Commencer  →")
+        btn.get_style_context().add_class("btn-primary")
+        btn.set_halign(Gtk.Align.CENTER)
+        btn.set_margin_top(28)
+        btn.connect("clicked", lambda *_: self._go("keyboard"))
+        box.pack_start(btn, False, False, 0)
+
+        self.stack.add_named(box, "welcome")
+
+    # ── PAGE 2 : Keyboard ────────────────────────────────────────────
+
+    def _mk_keyboard(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+
+        # Header : logo petit + titre
+        hdr = Gtk.Box(spacing=14)
+        hdr.pack_start(self._logo(size=40), False, False, 0)
+        t = self._lbl("Disposition du clavier", "page-title")
+        t.set_halign(Gtk.Align.START)
+        hdr.pack_start(t, True, True, 0)
+        box.pack_start(hdr, False, False, 0)
+
+        sub = self._lbl(
+            "Choisis le layout qui correspond à ton clavier physique.",
+            "subtitle"
+        )
+        sub.set_halign(Gtk.Align.START)
+        box.pack_start(sub, False, False, 0)
+
+        box.pack_start(self._sep(), False, False, 0)
+
+        # ComboBox
+        self.combo = Gtk.ComboBoxText()
+        for name, code in KEYBOARDS:
+            self.combo.append(code, name)
+        self.combo.set_active(0)
+        self.combo.connect("changed", self._on_layout)
+        box.pack_start(self._field_group("Langue / Layout", self.combo), False, False, 0)
+
+        # Badge code actuel
+        row = Gtk.Box(spacing=10)
+        row.set_halign(Gtk.Align.START)
+        row.pack_start(self._lbl("Sélectionné :", "subtitle"), False, False, 0)
+        self.badge = self._lbl("fr", "badge")
+        row.pack_start(self.badge, False, False, 0)
+        box.pack_start(row, False, False, 0)
+
+        box.pack_start(self._dots(0), False, False, 8)
+
+        btn = Gtk.Button(label="Continuer  →")
+        btn.get_style_context().add_class("btn-primary")
+        btn.connect("clicked", lambda *_: self._go("user"))
+        box.pack_start(self._nav(
+            back=lambda *_: self._go("welcome"),
+            fwd=btn,
+        ), False, False, 0)
+
+        self.stack.add_named(box, "keyboard")
+
+    def _on_layout(self, combo):
+        self.layout = combo.get_active_id() or "fr"
+        self.badge.set_text(self.layout)
+        subprocess.run(["setxkbmap", self.layout], capture_output=True)
+
+    # ── PAGE 3 : User ────────────────────────────────────────────────
+
+    def _mk_user(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+
+        hdr = Gtk.Box(spacing=14)
+        hdr.pack_start(self._logo(size=40), False, False, 0)
+        t = self._lbl("Créer ton compte", "page-title")
+        hdr.pack_start(t, True, True, 0)
+        box.pack_start(hdr, False, False, 0)
+
+        sub = self._lbl(
+            "Ce compte aura les droits administrateur.\n"
+            "Identifiants de la session live : shark / shark",
+            "subtitle"
+        )
+        sub.set_halign(Gtk.Align.START)
+        box.pack_start(sub, False, False, 0)
+
+        box.pack_start(self._sep(), False, False, 0)
+
+        # Nom utilisateur
+        self.e_user = Gtk.Entry()
+        self.e_user.set_placeholder_text("Ex : sharky")
+        self.e_user.set_activates_default(True)
+        self.err_user = self._lbl("", "err-label")
+        self.err_user.set_halign(Gtk.Align.START)
+        box.pack_start(self._field_group("Nom d'utilisateur", self.e_user, self.err_user), False, False, 0)
+
+        # Mot de passe
+        row_p = Gtk.Box(spacing=8)
+        self.e_pass = Gtk.Entry()
+        self.e_pass.set_visibility(False)
+        self.e_pass.set_placeholder_text("Mot de passe (min. 6 caractères)")
+        row_p.pack_start(self.e_pass, True, True, 0)
+        eye1 = Gtk.Button(label="👁")
+        eye1.get_style_context().add_class("btn-eye")
+        eye1.set_tooltip_text("Afficher / masquer")
+        eye1.connect("clicked", lambda *_: self.e_pass.set_visibility(
+            not self.e_pass.get_visibility()))
+        row_p.pack_start(eye1, False, False, 0)
+        self.err_pass = self._lbl("", "err-label")
+        self.err_pass.set_halign(Gtk.Align.START)
+        box.pack_start(self._field_group("Mot de passe", row_p, self.err_pass), False, False, 0)
+
+        # Confirmation
+        row_c = Gtk.Box(spacing=8)
+        self.e_conf = Gtk.Entry()
+        self.e_conf.set_visibility(False)
+        self.e_conf.set_placeholder_text("Confirmer le mot de passe")
+        row_c.pack_start(self.e_conf, True, True, 0)
+        eye2 = Gtk.Button(label="👁")
+        eye2.get_style_context().add_class("btn-eye")
+        eye2.connect("clicked", lambda *_: self.e_conf.set_visibility(
+            not self.e_conf.get_visibility()))
+        row_c.pack_start(eye2, False, False, 0)
+        self.err_conf = self._lbl("", "err-label")
+        self.err_conf.set_halign(Gtk.Align.START)
+        box.pack_start(self._field_group("Confirmer le mot de passe", row_c, self.err_conf), False, False, 0)
+
+        box.pack_start(self._dots(1), False, False, 4)
+
+        btn = Gtk.Button(label="Finaliser l'installation  →")
+        btn.get_style_context().add_class("btn-primary")
+        btn.connect("clicked", self._on_finish)
+        box.pack_start(self._nav(
+            back=lambda *_: self._go("keyboard"),
+            fwd=btn,
+        ), False, False, 0)
+
+        self.stack.add_named(box, "user")
+
+    def _clear_errs(self):
+        for e in (self.err_user, self.err_pass, self.err_conf):
+            e.set_text("")
+
+    def _on_finish(self, *_):
+        self._clear_errs()
+        user = self.e_user.get_text().strip().lower()
+        pwd  = self.e_pass.get_text()
+        conf = self.e_conf.get_text()
+        ok   = True
+
+        if not user:
+            self.err_user.set_text("⚠  Ce champ est requis.")
+            ok = False
+        elif len(user) < 2:
+            self.err_user.set_text("⚠  Minimum 2 caractères.")
+            ok = False
+        elif not all(c.isalnum() or c == '_' for c in user):
+            self.err_user.set_text("⚠  Lettres, chiffres et _ uniquement.")
+            ok = False
+        elif user in ("root", "shark", "daemon", "bin", "sys", "nobody"):
+            self.err_user.set_text("⚠  Nom réservé par le système.")
+            ok = False
+
+        if not pwd:
+            self.err_pass.set_text("⚠  Le mot de passe est requis.")
+            ok = False
+        elif len(pwd) < 6:
+            self.err_pass.set_text("⚠  6 caractères minimum.")
+            ok = False
+
+        if pwd and conf != pwd:
+            self.err_conf.set_text("⚠  Les mots de passe ne correspondent pas.")
+            ok = False
+
+        if not ok:
+            return
+
+        self.username = user
+        self.password = pwd
+        self._go("loading")
+        threading.Thread(target=self._apply, daemon=True).start()
+
+    # ── PAGE 4 : Loading ─────────────────────────────────────────────
+
+    def _mk_loading(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        box.set_valign(Gtk.Align.CENTER)
+
+        logo = self._logo(size=80)
+        logo.set_margin_bottom(8)
+        box.pack_start(logo, False, False, 0)
+
+        t = self._lbl("Configuration en cours…", "page-title")
+        t.set_halign(Gtk.Align.CENTER)
+        box.pack_start(t, False, False, 0)
+
+        self.lbl_status = self._lbl("Initialisation…", "subtitle")
+        self.lbl_status.set_halign(Gtk.Align.CENTER)
+        box.pack_start(self.lbl_status, False, False, 0)
+
+        self.pbar = Gtk.ProgressBar()
+        self.pbar.set_size_request(480, -1)
+        self.pbar.set_halign(Gtk.Align.CENTER)
+        box.pack_start(self.pbar, False, False, 0)
+
+        box.pack_start(self._dots(2), False, False, 4)
+
+        self._pulse_active = True
+        GLib.timeout_add(70, self._pulse)
+
+        self.stack.add_named(box, "loading")
+
+    def _pulse(self):
+        if self._pulse_active:
+            self.pbar.pulse()
+            return True
+        return False
+
+    def _status(self, txt):
+        GLib.idle_add(self.lbl_status.set_text, txt)
+
+    def _apply(self):
+        """Thread background — applique toute la configuration."""
+        steps = [
+            ("Configuration du clavier…",   self._step_keyboard),
+            ("Création du compte…",          self._step_user),
+            ("Copie du profil…",             self._step_home),
+            ("Configuration de la session…", self._step_session),
+            ("Finalisation…",                self._step_final),
+        ]
+        for msg, fn in steps:
+            self._status(msg)
+            fn()
+            time.sleep(0.4)
+
+        self._pulse_active = False
+        GLib.idle_add(self._go, "done")
+
+    def _step_keyboard(self):
+        subprocess.run(["localectl", "set-x11-keymap", self.layout],
+                       capture_output=True)
+        try:
+            with open("/etc/default/keyboard", "w") as f:
+                f.write(
+                    f'XKBMODEL="pc105"\nXKBLAYOUT="{self.layout}"\n'
+                    f'XKBVARIANT=""\nXKBOPTIONS=""\n'
+                )
+        except Exception:
+            pass
+
+    def _step_user(self):
+        """
+        BUG FIX PRINCIPAL : création + mot de passe robuste.
+        On utilise create_user() qui essaie chpasswd, passwd --stdin,
+        puis openssl en fallback.
+        """
+        create_user(self.username, self.password)
+
+    def _step_home(self):
+        home = f"/home/{self.username}"
+        # Copier skel (configuration de base)
+        subprocess.run(["rsync", "-a", "--ignore-existing",
+                        "/etc/skel/", f"{home}/"], capture_output=True)
+        # Changer le propriétaire
+        subprocess.run(["chown", "-R",
+                        f"{self.username}:{self.username}", home],
+                       capture_output=True)
+        # Définir le shell en zsh si disponible
+        zsh = subprocess.run(["which", "zsh"],
+                             capture_output=True, text=True).stdout.strip()
+        if zsh:
+            subprocess.run(["usermod", "-s", zsh, self.username],
+                           capture_output=True)
+
+    def _step_session(self):
+        """Met à jour LightDM pour autologin avec le nouvel utilisateur.
+
+        BUG FIX : le hook 50-sharkos-finalize.sh écrit l'autologin dans
+        /etc/lightdm/lightdm.conf.d/50-sharkos-autologin.conf, qui est
+        PRIORITAIRE sur /etc/lightdm/lightdm.conf. Si le wizard ne modifie
+        que le fichier principal, LightDM continue d'autolog-iner 'shark'
+        — or _step_final verrouille ce compte (usermod -L shark) → échec au
+        reboot. On met donc à jour les DEUX fichiers.
+        """
+        lightdm_conf = "/etc/lightdm/lightdm.conf"
+        autologin_dropin = "/etc/lightdm/lightdm.conf.d/50-sharkos-autologin.conf"
+
+        def _set_autologin(path):
+            try:
+                lines = open(path).readlines()
+            except Exception:
+                lines = [
+                    "[Seat:*]\n",
+                    "autologin-user=shark\n",
+                    "autologin-user-timeout=0\n",
+                    "autologin-session=xfce\n",
+                ]
+            new_lines = []
+            seen = False
+            for line in lines:
+                if line.startswith("autologin-user=") and not line.strip().startswith("#"):
+                    new_lines.append(f"autologin-user={self.username}\n")
+                    seen = True
+                else:
+                    new_lines.append(line)
+            if not seen:
+                # Injection si le [Seat:*] existe déjà
+                try:
+                    idx = next(i for i, l in enumerate(new_lines)
+                               if l.strip() == "[Seat:*]")
+                    new_lines.insert(idx + 1, f"autologin-user={self.username}\n")
+                except StopIteration:
+                    new_lines += [f"autologin-user={self.username}\n"]
+            try:
+                with open(path, "w") as f:
+                    f.writelines(new_lines)
+            except Exception:
+                pass
+
+        _set_autologin(lightdm_conf)
+        _set_autologin(autologin_dropin)
+
+        # Le nouvel utilisateur doit être membre du groupe 'autologin' pour
+        # que la règle PAM pam_succeed_if (hook 50) le laisse entrer sans
+        # mot de passe.
+        subprocess.run(["usermod", "-aG", "autologin", self.username],
+                       capture_output=True)
+
+    def _step_final(self):
+        # Marquer la config comme faite
+        flag = f"/home/{self.username}/.config"
+        os.makedirs(flag, exist_ok=True)
+        with open(f"{flag}/sharkos-setup-done", "w") as f:
+            f.write("done\n")
+        subprocess.run(["chown", "-R",
+                        f"{self.username}:{self.username}", flag],
+                       capture_output=True)
+        # Désactiver le compte shark (live) — optionnel
+        subprocess.run(["usermod", "-L", "shark"], capture_output=True)
+
+    # ── PAGE 5 : Done ────────────────────────────────────────────────
+
+    def _mk_done(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=24)
+        box.set_valign(Gtk.Align.CENTER)
+
+        logo = self._logo(size=100)
+        logo.set_margin_bottom(4)
+        box.pack_start(logo, False, False, 0)
+
+        t = self._lbl("SharkOS est prêt !", "page-title")
+        t.set_halign(Gtk.Align.CENTER)
+        box.pack_start(t, False, False, 0)
+
+        chip = self._lbl("✓  Compte créé avec succès", "chip-ok")
+        chip.set_halign(Gtk.Align.CENTER)
+        box.pack_start(chip, False, False, 0)
+
+        self.lbl_done = self._lbl(
+            "Redémarrage de la session dans 3 secondes…",
+            "subtitle"
+        )
+        self.lbl_done.set_justify(Gtk.Justification.CENTER)
+        self.lbl_done.set_halign(Gtk.Align.CENTER)
+        box.pack_start(self.lbl_done, False, False, 0)
+
+        box.pack_start(self._sep(), False, False, 0)
+
+        btn = Gtk.Button(label="Redémarrer maintenant")
+        btn.get_style_context().add_class("btn-primary")
+        btn.set_halign(Gtk.Align.CENTER)
+        btn.connect("clicked", self._reboot)
+        box.pack_start(btn, False, False, 0)
+
+        self._countdown = 3
+        GLib.timeout_add_seconds(1, self._tick)
+
+        self.stack.add_named(box, "done")
+
+    def _tick(self):
+        self._countdown -= 1
+        if self._countdown <= 0:
+            self._reboot()
+            return False
+        GLib.idle_add(
+            self.lbl_done.set_text,
+            f"Redémarrage de la session dans {self._countdown} seconde(s)…"
+        )
+        return True
+
+    def _reboot(self, *_):
+        self.close()
+        subprocess.run(["systemctl", "restart", "lightdm"], capture_output=True)
+        sys.exit(0)
+
+
+# =============================================================================
+# Vérifier les droits root (nécessaire pour créer des utilisateurs)
+# =============================================================================
+if __name__ == "__main__":
+    if os.geteuid() != 0:
+        # Relancer en sudo si possible
+        try:
+            os.execvp("pkexec", ["pkexec", sys.executable] + sys.argv)
+        except Exception:
+            pass
+        # Fallback : afficher un dialog d'erreur
+        dialog = Gtk.MessageDialog(
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.OK,
+            text="Droits insuffisants",
+        )
+        dialog.format_secondary_text(
+            "Le wizard doit être lancé en tant que root.\n"
+            "Lance : sudo python3 sharkos-setup-wizard"
+        )
+        dialog.run()
+        sys.exit(1)
+
+    Wizard()
+    Gtk.main()

@@ -1,0 +1,16 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Installer SharkOS
+Name[fr]=Installer SharkOS
+Comment=Installer graphiquement SharkOS sur ton ordinateur
+Comment[en]=Graphically install SharkOS on your computer
+# NB : calamares est absent de l'ISO (< 2 Go) — le vrai installateur est le
+# setup-wizard graphique (qui s'élève en root via pkexec), relayé par
+# sharkos-installer pour l'écriture sur disque.
+Exec=/usr/local/bin/sharkos-setup-wizard
+Icon=system-software-install
+Terminal=false
+Categories=System;UniversalAccess;
+Path=/tmp
+StartupNotify=true
