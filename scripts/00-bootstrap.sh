@@ -40,6 +40,10 @@ lb clean 2>/dev/null || true
 # 3. CONFIG LIVE-BUILD (Garuda-inspired : zstd, firmware, non-free)
 # =============================================================================
 echo "[3/6] Config live-build Garuda-style..."
+# NB CRITIQUE : live-build d'Ubuntu (runner CI 22.04) définit par défaut
+# --linux-packages linux-generic (un paquet Ubuntu qui n'existe PAS dans
+# Debian) → "E: Unable to locate package linux-generic". On force le kernel
+# Debian bookworm pour que le build fonctionne sur n'importe quel hôte.
 lb config \
   --architectures amd64 \
   --distribution bookworm \
@@ -55,6 +59,8 @@ lb config \
   --mirror-chroot-security   http://security.debian.org/debian-security \
   --mirror-binary-security   http://security.debian.org/debian-security \
   --keyring-packages debian-archive-keyring \
+  --linux-packages "linux-image-amd64" \
+  --linux-flavours "amd64" \
   --iso-application "SharkOS Dragon Edition" \
   --iso-publisher "SharkOS Project" \
   --iso-volume "SHARKOS_DRAGON" \
