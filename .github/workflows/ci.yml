@@ -284,10 +284,12 @@ jobs:
           check "non-free"
           check "firmware"
           check "SharkOS-Dragon"
-          # Kernel Debian forcé (sinon live-build Ubuntu installe linux-generic → échec)
-          # NB : motif sans tirets au début (sinon grep le prend pour une option)
+          # Kernel + initramfs Debian forcés (sinon live-build Ubuntu installe
+          # linux-generic/casper → échec). NB : motif sans tirets au début
+          # (sinon grep le prend pour une option)
           check "linux-packages \"linux-image\""
           check "linux-flavours"
+          check "linux-initramfs \"live-boot\""
           [[ $FAIL -eq 0 ]] && echo "✅ Bootstrap Garuda-style OK" || { echo "❌ Bootstrap incomplet"; exit 1; }
 
   # ===========================================================================
