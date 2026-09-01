@@ -50,12 +50,15 @@ echo "[3/6] Config live-build Garuda-style..."
 # = linux-image-amd64 (NE PAS écrire linux-image-amd64 → -amd64-amd64).
 # NB : l'option s'appelle --initramfs et NON --linux-initramfs (lb config
 # Ubuntu : "unrecognized option").
-# RACINE DU PROBLÈME : LB_MODE lit `lsb_release -is` → "ubuntu" sur le runner
-# → thèmes syslinux Ubuntu (syslinux-themes-ubuntu-oneiric, gfxboot-theme-ubuntu)
-# inexistants dans Debian. --mode debian force TOUS les défauts Debian
-# (thème syslinux "live-build" intégré, firmware true, initramfs live-boot…).
+# MODE : on GARDE le mode par défaut (ubuntu sur le runner) car il génère la
+# bonne suite sécurité "<distro>-security" — le mode debian génère l'ancien
+# "<distro>/updates" qui 404 sur security.debian.org depuis bookworm !
+# En revanche on PIN explicitement tout ce que le mode ubuntu défaut mal :
+#   • thème syslinux : --syslinux-theme live-build (sinon syslinux-themes-
+#     ubuntu-oneiric + gfxboot-theme-ubuntu, inexistants dans Debian ; le thème
+#     "live-build" est rendu depuis les templates via librsvg2-bin du chroot)
+#   • kernel/initramfs/initsystem/firmware : épinglés plus bas.
 lb config \
-  --mode "debian" \
   --architectures amd64 \
   --distribution bookworm \
   --archive-areas "main contrib non-free non-free-firmware" \
@@ -70,6 +73,7 @@ lb config \
   --mirror-chroot-security   http://security.debian.org/debian-security \
   --mirror-binary-security   http://security.debian.org/debian-security \
   --keyring-packages debian-archive-keyring \
+  --syslinux-theme "live-build" \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
   --initramfs "live-boot" \
