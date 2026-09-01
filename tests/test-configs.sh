@@ -196,7 +196,7 @@ sec_check "$H10" "net.ipv4.tcp_syncookies = 1" "tcp_syncookies (anti-SYN flood)"
 sec_check "$H10" "net.ipv4.conf.all.log_martians = 1" "log martians (anti-spoof)"
 sec_check "$BS"  "mitigations=on"            "Boot : mitigations CPU actives"
 sec_check "$BS"  "page_poison=1"             "Boot : poison pages (durcissement slab)"
-sec_check "$BS"  "linux-image-amd64"         "Kernel Debian forcé (sinon linux-generic Ubuntu → build échoue)"
+sec_check "$BS"  'linux-packages "linux-image"' "Kernel Debian forcé (sinon linux-generic Ubuntu → build échoue)"
 sec_check "$H50" "shark-extras"              "shark-extras (gros paquets optionnels)"
 PASS=$((PASS + SEC_OK))
 (( SEC_BAD > 0 )) && FAIL=$((FAIL + SEC_BAD))
