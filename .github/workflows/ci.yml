@@ -287,6 +287,7 @@ jobs:
           # Kernel + initramfs Debian forcés (sinon live-build Ubuntu installe
           # linux-generic/casper → échec). NB : motif sans tirets au début
           # (sinon grep le prend pour une option)
+          check "mode \"debian\""
           check "linux-packages \"linux-image\""
           check "linux-flavours"
           check "initramfs \"live-boot\""

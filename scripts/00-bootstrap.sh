@@ -50,7 +50,12 @@ echo "[3/6] Config live-build Garuda-style..."
 # = linux-image-amd64 (NE PAS écrire linux-image-amd64 → -amd64-amd64).
 # NB : l'option s'appelle --initramfs et NON --linux-initramfs (lb config
 # Ubuntu : "unrecognized option").
+# RACINE DU PROBLÈME : LB_MODE lit `lsb_release -is` → "ubuntu" sur le runner
+# → thèmes syslinux Ubuntu (syslinux-themes-ubuntu-oneiric, gfxboot-theme-ubuntu)
+# inexistants dans Debian. --mode debian force TOUS les défauts Debian
+# (thème syslinux "live-build" intégré, firmware true, initramfs live-boot…).
 lb config \
+  --mode "debian" \
   --architectures amd64 \
   --distribution bookworm \
   --archive-areas "main contrib non-free non-free-firmware" \
