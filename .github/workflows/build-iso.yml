@@ -71,16 +71,22 @@ jobs:
         id: iso-check
         run: |
           set -euo pipefail
-          ISO=$(ls iso-build/SharkOS-Dragon-Edition.iso 2>/dev/null || true)
-          if [[ -z "$ISO" || ! -f "$ISO" ]]; then
-            echo "❌ ISO non trouvée dans iso-build/"
-            find iso-build -type f -name "*.iso" 2>&1 | head || true
+          # Lecture SEULE : iso-build/ appartient à root (bootstrap + build en
+          # sudo) → tee/écriture échouerait ici (Permission denied). Le fichier
+          # .sha256 a déjà été généré par 01-build-iso.sh (step sudo).
+          ISO="iso-build/SharkOS-Dragon-Edition.iso"
+          if [[ ! -f "$ISO" ]]; then
+            echo "❌ ISO non trouvée : $ISO"
+            find iso-build -maxdepth 2 -type f -name "*.iso" 2>&1 | head -20 || true
             exit 1
           fi
           echo "ISO_PATH=$ISO" >> "$GITHUB_OUTPUT"
           ISO_SIZE=$(du -sh "$ISO" | cut -f1)
           echo "ISO_SIZE=$ISO_SIZE" >> "$GITHUB_OUTPUT"
-          sha256sum "$ISO" | tee "$ISO.sha256"
+          ls -lh "$ISO"
+          sha256sum "$ISO"
+          echo "✅ .sha256 présent (généré par le build) :"
+          cat "$ISO.sha256"
           echo "✅ ISO : $ISO ($ISO_SIZE)"
 
       - name: 🖥️ Test SYSTÈME RÉEL (boot QEMU + Calamares + Wi-Fi + contenu)
