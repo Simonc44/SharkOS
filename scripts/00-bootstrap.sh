@@ -188,6 +188,14 @@ for HOOK in \
   fi
 done
 
+# Vérification : le glob live-build « config/hooks/*.chroot » doit matcher
+HOOKS_ON_DISK=$(ls config/hooks/*.hook.chroot 2>/dev/null | wc -l)
+echo "   → hooks .hook.chroot dans config/hooks : $HOOKS_ON_DISK"
+if [[ "$HOOKS_ON_DISK" -lt 7 ]]; then
+  echo "   ❌ Copie des hooks incomplète — vérifie chroot-hooks/"
+  exit 1
+fi
+
 # =============================================================================
 # 6. ASSETS (wallpaper)
 # =============================================================================
@@ -285,7 +293,7 @@ if [[ -f "$ROOT_DIR/config/install-sharkos.desktop" ]]; then
 fi
 
 echo ""
-echo "✅ Bootstrap terminé ! Hooks copiés : 10 → 20 → 30 → 40 → 50 → 60"
+echo "✅ Bootstrap terminé ! Hooks copiés : 10 → 12 → 20 → 30 → 40 → 50 → 60"
 echo "   Artifact final : SharkOS-Dragon-Edition.iso"
 echo "   sudo bash scripts/01-build-iso.sh"
 echo ""

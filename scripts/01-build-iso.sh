@@ -28,6 +28,19 @@ echo "⚡ Démarrage du build live-build (zstd max)..."
 echo "   Ça peut prendre 20-60 min selon la connexion."
 echo ""
 
+# ---------------------------------------------------------------------------
+# DIAGNOSTIC hooks : vérifie que config/hooks/*.chroot est bien présent AVANT
+# le build (le log du run montrera l'état réel sur disque).
+# ---------------------------------------------------------------------------
+echo "🔍 Diagnostic config/hooks avant build :"
+ls -la config/hooks/ 2>&1 | head -15
+HOOKS_ON_DISK=$(ls config/hooks/*.chroot 2>/dev/null | wc -l)
+echo "   hooks .chroot trouvés : $HOOKS_ON_DISK"
+if [[ "$HOOKS_ON_DISK" -lt 7 ]]; then
+  echo "❌ config/hooks incomplet — relance d'abord : sudo bash scripts/00-bootstrap.sh"
+  exit 1
+fi
+
 # Build — `|| true` pour ne PAS tuer le script avec set -e si lb build échoue :
 # on doit pouvoir lire /tmp/sharkos-build.log et sortir un code 1 maîtrisé.
 sudo lb build 2>&1 | tee /tmp/sharkos-build.log || true
@@ -63,6 +76,9 @@ else
   echo "   Dernières lignes du log :"
   if [[ -f /tmp/sharkos-build.log ]]; then
     tail -60 /tmp/sharkos-build.log
+    echo ""
+    echo "   ——— Zone hooks (lb_chroot_hooks) ———"
+    grep -n -A3 -B3 "lb_chroot_hooks\|lb_chroot_hacks\|Begin executing hooks\|Copying hook\|hook failed" /tmp/sharkos-build.log | head -60
   else
     echo "   (log introuvable)"
   fi
