@@ -295,6 +295,12 @@ jobs:
           # Hooks : copiés à PLAT dans config/hooks/ (le glob de live-build est
           # non récursif — un sous-dossier les rendait invisibles) + hook 12
           check "12-syslinux-compat.sh"
+          # syslinux-utils (isohybrid) doit être installé DANS le chroot par le
+          # hook 12 — binary.sh (lb_binary_iso) appelle isohybrid en chroot
+          grep -q "syslinux syslinux-common syslinux-utils isolinux" \
+            chroot-hooks/12-syslinux-compat.sh \
+            || { echo "❌ hook 12 doit installer syslinux-utils (isohybrid) dans le chroot"; exit 1; }
+          echo "  ✅ syslinux-utils (isohybrid) dans hook 12"
           check "rm -rf config/hooks"
           check 'DEST="config/hooks/'
           [[ $FAIL -eq 0 ]] && echo "✅ Bootstrap Garuda-style OK" || { echo "❌ Bootstrap incomplet"; exit 1; }

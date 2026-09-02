@@ -22,9 +22,14 @@ echo ""
 echo "🦈 [HOOK 12] Compatibilité syslinux Debian ↔ live-build Ubuntu..."
 echo ""
 
-# 1) Packages syslinux Debian (layout bookworm) — `isolinux` est un paquet
-#    séparé en Debian ; syslinux-common fournit vesamenu.c32.
-apt-get install -y --no-install-recommends syslinux syslinux-common isolinux
+# 1) Packages syslinux Debian (layout bookworm) :
+#    • `isolinux`  — paquet séparé en Debian (isolinux.bin dans /usr/lib/ISOLINUX/)
+#    • `syslinux-common` — vesamenu.c32 dans /usr/lib/syslinux/modules/bios/
+#    • `syslinux-utils` — isohybrid (/usr/bin/isohybrid) : REQUIS par binary.sh
+#      à l'étape binaire lb_binary_iso (« Chroot chroot "sh binary.sh" » appelle
+#      isohybrid DANS le chroot — le syslinux-utils de l'hôte Ubuntu n'y suffit
+#      pas !).
+apt-get install -y --no-install-recommends syslinux syslinux-common syslinux-utils isolinux
 
 # 2) Shims des chemins « flat » Ubuntu → layout Debian. Le symlink peut être
 #    temporairement pendant (cible manquante) : syslinux-common est déjà
