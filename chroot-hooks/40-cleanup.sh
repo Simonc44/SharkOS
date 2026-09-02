@@ -74,10 +74,16 @@ echo "y" | ufw enable 2>/dev/null || true
 systemctl enable ufw 2>/dev/null || true
 
 # AppArmor : confinement des applications (profile par défaut)
-if apt-cache show apparmor &>/dev/null; then
-  apt-get install -y --no-install-recommends apparmor apparmor-utils 2>/dev/null || true
+# NB : apparmor + apparmor-utils sont installés par la LISTE DE PAQUETS
+# (bootstrap, phase package-lists avec sources à jour) — à l'époque où cette
+# installation se faisait ici (apt en hook), elle échouait silencieusement
+# (« Package apparmor is not available ») → ISO sans AppArmor.
+if dpkg -s apparmor &>/dev/null; then
   systemctl enable apparmor 2>/dev/null || true
-  aa-enforce /sbin/dhclient /usr/sbin/tcpdump 2>/dev/null || true
+  # Profil dhclient si présent (sinon profils par défaut Debian déjà actifs)
+  for PROFILE in /sbin/dhclient /usr/sbin/tcpdump; do
+    [[ -f "/etc/apparmor.d/${PROFILE#/}" ]] && aa-enforce "$PROFILE" 2>/dev/null || true
+  done
   echo "   ✅ AppArmor actif (profils par défaut Debian)"
 fi
 

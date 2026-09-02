@@ -804,3 +804,38 @@ if [[ -n "$SHARKOS_REPO" && -f "$SHARKOS_REPO/scripts/03-verify-iso.sh" ]]; then
 fi
 
 echo "   ✅ Calamares Dracula polish appliqué (QSS, intro, sidebar, splash, multi-logo)"
+
+echo "   [xattr] purge des xattrs du chroot (ACLs posix → squashfs sans table xattr illisible)..."
+# 💥 CRITIQUE BOOT : le log QEMU réel montre « unable to read xattr id index
+# table » — le squashfs embarquait des xattrs (ACLs posix copiées depuis
+# l'hôte Ubuntu, warnings mksquashfs « Unrecognised xattr prefix ») que le
+# kernel 6.1 refuse de lire au montage → live-boot ne monte JAMAIS le rootfs
+# → pas de cible graphique. Fix : purger TOUS les xattrs du chroot avant la
+# création du squashfs → mksquashfs ne stocke aucune table xattr.
+if command -v python3 &>/dev/null; then
+  python3 - << 'PYEOF'
+import os
+skip = {'/proc', '/sys', '/dev', '/run', '/tmp', '/var/tmp', '/var/run'}
+def purge(path):
+    try:
+        for x in os.listxattr(path):
+            try:
+                os.removexattr(path, x)
+            except OSError:
+                pass
+    except OSError:
+        pass
+count = 0
+for root, dirs, files in os.walk('/'):
+    # Ne pas descendre dans les pseudo-fs montés
+    dirs[:] = [d for d in dirs if os.path.join(root, d) not in skip]
+    for name in dirs + files:
+        p = os.path.join(root, name)
+        purge(p)
+        count += 1
+print(f"   xattrs purgés sur {count} entrées")
+PYEOF
+  echo "   ✓ xattrs purgés (squashfs bootable : pas de table xattr à lire)"
+else
+  echo "   ⚠ python3 absent — xattrs non purgés (risque boot squashfs)"
+fi

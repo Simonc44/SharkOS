@@ -142,18 +142,38 @@ elif ! command -v mkfs.ext4 &>/dev/null || ! command -v debugfs &>/dev/null; the
   warn "SKIP — mkfs.ext4/debugfs (e2fsprogs) absents"
   SKIPPED_CHECKS=$((SKIPPED_CHECKS + 4))
 else
-  # Construire un média live minimal (ext4) contenant /live/filesystem.squashfs
-  # via debugfs → PAS besoin de root ni de mount (e2fsprogs est partout).
+  # Construire un média live minimal (ext4) contenant /live/filesystem.squashfs.
+  # ⚠️ L'image doit être GÉNÉREUSE et sans blocs réservés (-m 0) : une image
+  # trop serrée (+48 Mo seulement, 5% réservés par défaut) a déjà produit un
+  # squashfs dont la fin (table xattr) était illisible → boot QEMU bloqué sur
+  # « unable to read xattr id index table ».
+  # Chemin root (CI) : mount en boucle + cp → copie octet-exacte et vérifiée.
+  # Fallback non-root : debugfs (e2fsprogs, pas besoin de root ni de mount).
   MEDIA="$TMP/live-media.img"
   SQSIZE=$(stat -c%s "$SQUASH")
-  MBSIZE=$(( (SQSIZE / 1048576) + 48 ))
+  MBSIZE=$(( (SQSIZE / 1048576) + 300 ))
+  PREP_OK=false
   if dd if=/dev/zero of="$MEDIA" bs=1M count="$MBSIZE" status=none 2>/dev/null \
-     && mkfs.ext4 -F -q -L sharkos-live "$MEDIA" >/dev/null 2>&1 \
-     && debugfs -w -R "mkdir /live" "$MEDIA" >/dev/null 2>&1 \
-     && debugfs -w -R "write $SQUASH /live/filesystem.squashfs" "$MEDIA" >/dev/null 2>&1; then
+     && mkfs.ext4 -F -q -m 0 -O ^has_journal -L sharkos-live "$MEDIA" >/dev/null 2>&1; then
+    if [[ "$(id -u)" == 0 ]] && mkdir -p "$TMP/mnt" 2>/dev/null; then
+      if mount -o loop "$MEDIA" "$TMP/mnt" >/dev/null 2>&1; then
+        mkdir -p "$TMP/mnt/live"
+        if cp "$SQUASH" "$TMP/mnt/live/filesystem.squashfs" 2>/dev/null \
+           && [[ "$(stat -c%s "$TMP/mnt/live/filesystem.squashfs" 2>/dev/null)" == "$SQSIZE" ]]; then
+          PREP_OK=true
+        fi
+        umount "$TMP/mnt" >/dev/null 2>&1 || true
+      fi
+    fi
+    if [[ "$PREP_OK" != true ]] && debugfs -w -R "mkdir /live" "$MEDIA" >/dev/null 2>&1 \
+       && debugfs -w -R "write $SQUASH /live/filesystem.squashfs" "$MEDIA" >/dev/null 2>&1; then
+      PREP_OK=true
+    fi
+  fi
+  if [[ "$PREP_OK" == true ]]; then
     ok "média live préparé ($MBSIZE Mo, squashfs inclus)"
   else
-    err "impossible de préparer le média live (dd/mkfs.ext4/debugfs)"
+    err "impossible de préparer le média live (dd/mkfs.ext4/mount|debugfs)"
     MEDIA=""
   fi
 

@@ -151,6 +151,22 @@ bash
 git
 ca-certificates
 
+# ── Wi-Fi complet (NetworkManager + wpa_supplicant + outils) ──────
+# wpasupplicant : REQUIS par NetworkManager pour le WPA2/WPA3 — avec
+# --apt-recommends false il n'est PAS tiré automatiquement (le test système
+# réel le vérifie : usr/sbin/wpa_supplicant doit exister dans l'ISO).
+wpasupplicant
+iw
+
+# ── Sécurité ───────────────────────────────────────────────────────
+# ufw + apparmor : installés ICI (phase package-lists, sources à jour) et
+# PAS seulement par le hook 40 (apt-cache/install en hook a échoué
+# silencieusement → ISO sans AppArmor). Le hook 40 active ensuite les
+# services (systemctl enable).
+ufw
+apparmor
+apparmor-utils
+
 # ── Bluetooth ─────────────────────────────────────────────────────
 bluez
 blueman
