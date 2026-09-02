@@ -33,12 +33,22 @@ mkdir -p /usr/lib/syslinux
 ln -sf /usr/lib/ISOLINUX/isolinux.bin /usr/lib/syslinux/isolinux.bin
 ln -sf /usr/lib/syslinux/modules/bios/vesamenu.c32 /usr/lib/syslinux/vesamenu.c32
 
-# 3) bootlogo gfxboot : extraction inconditionnelle en mode ubuntu → on la
-#    neutralise avec un tarball vide valide.
-mkdir -p /usr/share/gfxboot-theme-ubuntu
-if [ ! -e /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz ]; then
-  tar czf /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz --files-from /dev/null
-fi
+# 3) bootlogo gfxboot : en mode ubuntu l'extraction du tarball est
+#    inconditionnelle ET lb_binary_syslinux relit ensuite
+#    « binary/isolinux/bootlogo » comme une archive cpio (hack gfxboot,
+#    ligne ~365 : "(cd tmpdir && cpio -i) < bootlogo" puis re-pack). Le
+#    bootlogo doit donc EXISTER et être un cpio valide — il est de toute
+#    façon vidé, rempli des fichiers du thème (*.cfg/*.fnt/...) et re-packé
+#    par live-build. On fournit un cpio « trailer seul » (cpio est dans la
+#    base debootstrap).
+mkdir -p /usr/share/gfxboot-theme-ubuntu /tmp/gfxboot-src
+(
+  cd /tmp/gfxboot-src
+  echo sharkos > marker
+  find . -maxdepth 1 -type f -print 2>/dev/null | cpio -o 2>/dev/null > bootlogo
+)
+tar czf /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz -C /tmp/gfxboot-src bootlogo
+rm -rf /tmp/gfxboot-src
 
 # 4) rsvg → rsvg-convert : à l'étape binaire, lb_binary_syslinux rend le splash
 #    en appelant « rsvg --format png --height 480 --width 640 in.svg out.png »
