@@ -15,7 +15,8 @@ echo "🦈 SharkOS — Build ISO Dragon Edition"
 echo "======================================"
 echo ""
 
-LB_DIR="$(dirname "$0")/../iso-build"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LB_DIR="$ROOT_DIR/iso-build"
 cd "$LB_DIR" || exit 1
 
 # Vérifier que le bootstrap a été fait (config live-build présente)

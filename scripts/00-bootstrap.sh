@@ -5,6 +5,15 @@
 # =============================================================================
 set -euo pipefail
 
+# =============================================================================
+# RACINE DU PROJET — ABSOLUE, calculée AVANT tout `cd`.
+# ⚠️ CRITIQUE : « $(dirname "$0")/.. » est un chemin RELATIF — il se résout
+# contre le cwd courant. Le script fait `cd iso-build` en section 2, donc tout
+# usage postérieur de ROOT_DIR pointait dans iso-build/scripts/.. (inexistant)
+# → les hooks n'ont JAMAIS été copiés, ni wallpapers/installer/Calamares
+# shipés (les « if [[ -f "$ROOT_DIR/..." ]] » échouaient en silence).
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 echo ""
 echo "🦈 SharkOS Bootstrap — Dragon Edition (Garuda-style)"
 echo "======================================================"
@@ -31,7 +40,7 @@ sudo apt-get install -y --no-install-recommends \
 # 2. RÉPERTOIRE LIVE-BUILD
 # =============================================================================
 echo "[2/6] Répertoire live-build..."
-LB_DIR="$(dirname "$0")/../iso-build"
+LB_DIR="$ROOT_DIR/iso-build"
 cd "$LB_DIR"
 
 lb clean 2>/dev/null || true
@@ -111,6 +120,10 @@ pulseaudio
 pulseaudio-utils
 pavucontrol
 
+# ── Sudo (--apt-recommends false → pas de sudo sans liste explicite) ──
+# Requis par le hook 50 (user shark + sudo NOPASSWD) et les commandes shark-*
+sudo
+
 # ── Polices ────────────────────────────────────────────────────────
 # NB : pas de ttf-mscorefonts-installer — son postinst télécharge depuis
 # SourceForge et bloque la build noninteractive. fonts-liberation fournit
@@ -165,7 +178,6 @@ PKGLIST
 # 5. HOOKS CHROOT
 # =============================================================================
 echo "[5/6] Hooks chroot..."
-ROOT_DIR="$(dirname "$0")/.."
 # ⚠️ Hooks PLATS dans config/hooks/ (PAS de sous-dossier) : live-build ne les
 # découvre que via le glob non récursif « config/hooks/*.chroot » — un
 # sous-dossier config/hooks/live/ rendait tous les hooks invisibles.
@@ -189,9 +201,10 @@ for HOOK in \
 done
 
 # Vérification : le glob live-build « config/hooks/*.chroot » doit matcher
-HOOKS_ON_DISK=$(ls config/hooks/*.hook.chroot 2>/dev/null | wc -l)
-echo "   → hooks .hook.chroot dans config/hooks : $HOOKS_ON_DISK"
-if [[ "$HOOKS_ON_DISK" -lt 7 ]]; then
+# (pipefail-safe : ls sans match exit 2 → || true + défaut 0)
+HOOKS_ON_DISK=$(ls config/hooks/*.hook.chroot 2>/dev/null | wc -l) || true
+echo "   → hooks .hook.chroot dans config/hooks : ${HOOKS_ON_DISK:-0}"
+if [[ "${HOOKS_ON_DISK:-0}" -lt 7 ]]; then
   echo "   ❌ Copie des hooks incomplète — vérifie chroot-hooks/"
   exit 1
 fi
