@@ -185,7 +185,14 @@ else
       -display none -serial file:"$LOG" \
       -no-reboot \
       -kernel "$KERNEL" -initrd "$INITRD" \
-      -append "boot=live components console=ttyS0 console=tty0 live-media=/dev/sda mitigations=on audit=1 page_poison=1 slab_nomerge" \
+      # ⚠️ ORDRE des console= : ttyS0 doit être le DERNIER paramètre — c'est le
+      # dernier console= qui devient /dev/console → les messages systemd
+      # ("[ OK ] Reached target Graphical Interface", "Started Network
+      # Manager", LightDM…) n'atteignent la série QUE si /dev/console = ttyS0.
+      # Avec `console=ttyS0 console=tty0`, /dev/console = tty0 (non capturé)
+      # → les greps systemd ci-dessous rataient TOUJOURS, même boot réussi.
+      # systemd.show_status=1 force l'affichage du statut sur la console.
+      -append "boot=live components console=tty0 console=ttyS0 systemd.show_status=1 live-media=/dev/sda mitigations=on audit=1 page_poison=1 slab_nomerge" \
       -drive file="$MEDIA",format=raw,if=ide \
       -netdev user,id=n0 -device e1000,netdev=n0 \
       >/dev/null 2>&1 &
@@ -318,9 +325,14 @@ else
     else
       err "UFW pas actif par défaut dans l'ISO"
     fi
+    # apparmor.service (Debian) a [Install] WantedBy=sysinit.target → le lien
+    # d'activation vit dans sysinit.target.wants/ (PAS multi-user.target.wants/).
+    # Les profils dhclient/tcpdump ne sont PAS shipés par apparmor en bookworm.
     if [[ -d "$ROOTFS/etc/apparmor.d" ]] && \
-       [[ -e "$ROOTFS/etc/systemd/system/multi-user.target.wants/apparmor.service" || -e "$ROOTFS/etc/apparmor.d/usr.sbin.dhclient" ]]; then
-      ok "AppArmor installé + profil dhclient présent"
+       [[ -x "$ROOTFS/usr/sbin/aa-status" ]] && \
+       [[ -e "$ROOTFS/etc/systemd/system/sysinit.target.wants/apparmor.service" || \
+          -e "$ROOTFS/etc/systemd/system/multi-user.target.wants/apparmor.service" ]]; then
+      ok "AppArmor installé + service activé (profils /etc/apparmor.d)"
     else
       err "AppArmor absent/incomplet"
     fi

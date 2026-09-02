@@ -206,6 +206,8 @@ sec_check "chroot-hooks/12-syslinux-compat.sh" "syslinux-utils" "Hook 12 : sysli
 sec_check "$BS"  '^wpasupplicant$'            "Wi-Fi : wpasupplicant dans la liste de paquets (sinon ISO sans wpa_supplicant → test système ✗)"
 sec_check "$BS"  '^apparmor$'                 "AppArmor installé par la liste de paquets (sinon ISO sans AppArmor → test système ✗)"
 sec_check "$BS"  '^ufw$'                      "UFW installé par la liste de paquets (phase package-lists fiable)"
+sec_check "$BS"  '^xserver-xorg$'             "Bureau graphique : xserver-xorg dans la liste (xfce4/lightdm ne tirent PAS le serveur X → sinon cible graphique jamais atteinte au boot)"
+sec_check "$H40" 'sysinit.target.wants/apparmor.service' "Hook 40 : lien sysinit.target.wants/apparmor.service ([Install] Debian = sysinit, pas multi-user → sinon check ISO ✗)"
 sec_check "$H60" 'xattr'                      "Hook 60 : purge des xattrs du chroot (sinon squashfs avec table xattr illisible → boot QEMU s'arrête)"
 sec_check "$BS"  'rm -rf config/hooks'          "Hooks à plat dans config/hooks (sinon glob live-build ne les voit pas → jamais exécutés)"
 sec_check "$BS"  'DEST="config/hooks/'          "Destination hooks : config/hooks/ (pas config/hooks/live/)"

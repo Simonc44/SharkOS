@@ -80,6 +80,12 @@ systemctl enable ufw 2>/dev/null || true
 # (« Package apparmor is not available ») → ISO sans AppArmor.
 if dpkg -s apparmor &>/dev/null; then
   systemctl enable apparmor 2>/dev/null || true
+  # Symlink d'activation EXPLICITE : apparmor.service (Debian) a
+  # [Install] WantedBy=sysinit.target → le lien doit vivre dans
+  # sysinit.target.wants/ (le test système le vérifie dans l'ISO).
+  mkdir -p /etc/systemd/system/sysinit.target.wants
+  ln -sf /lib/systemd/system/apparmor.service \
+    /etc/systemd/system/sysinit.target.wants/apparmor.service
   # Profil dhclient si présent (sinon profils par défaut Debian déjà actifs)
   for PROFILE in /sbin/dhclient /usr/sbin/tcpdump; do
     [[ -f "/etc/apparmor.d/${PROFILE#/}" ]] && aa-enforce "$PROFILE" 2>/dev/null || true

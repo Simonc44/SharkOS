@@ -116,6 +116,12 @@ plank
 lightdm
 lightdm-gtk-greeter
 lightdm-gtk-greeter-settings
+# xserver-xorg : REQUIS pour tout affichage graphique. xfce4/lightdm ne
+# dépendent que des libs X — PAS du serveur — et avec --apt-recommends
+# false rien ne le tire implicitement → ISO sans X → LightDM ne peut pas
+# démarrer → cible graphique jamais atteinte au boot (test système ✗).
+# Tire xserver-xorg-core + video-all + input-all (drivers toutes marques).
+xserver-xorg
 pulseaudio
 pulseaudio-utils
 pavucontrol
