@@ -166,17 +166,22 @@ PKGLIST
 # =============================================================================
 echo "[5/6] Hooks chroot..."
 ROOT_DIR="$(dirname "$0")/.."
-mkdir -p config/hooks/live
+# ⚠️ Hooks PLATS dans config/hooks/ (PAS de sous-dossier) : live-build ne les
+# découvre que via le glob non récursif « config/hooks/*.chroot » — un
+# sous-dossier config/hooks/live/ rendait tous les hooks invisibles.
+rm -rf config/hooks
+mkdir -p config/hooks
 
 for HOOK in \
   "$ROOT_DIR/chroot-hooks/10-install-tools.sh" \
+  "$ROOT_DIR/chroot-hooks/12-syslinux-compat.sh" \
   "$ROOT_DIR/chroot-hooks/20-apply-theme.sh" \
   "$ROOT_DIR/chroot-hooks/30-configure-shell.sh" \
   "$ROOT_DIR/chroot-hooks/40-cleanup.sh" \
   "$ROOT_DIR/chroot-hooks/50-sharkos-finalize.sh" \
   "$ROOT_DIR/chroot-hooks/60-sharkos-polish.sh"; do
   if [[ -f "$HOOK" ]]; then
-    DEST="config/hooks/live/$(basename $HOOK .sh).hook.chroot"
+    DEST="config/hooks/$(basename $HOOK .sh).hook.chroot"
     cp "$HOOK" "$DEST"
     chmod +x "$DEST"
     echo "   ✓ $(basename $HOOK)"

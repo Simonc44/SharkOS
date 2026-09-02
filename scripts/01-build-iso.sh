@@ -19,7 +19,7 @@ LB_DIR="$(dirname "$0")/../iso-build"
 cd "$LB_DIR" || exit 1
 
 # Vérifier que le bootstrap a été fait (config live-build présente)
-if [[ ! -d "config/package-lists" || ! -d "config/hooks/live" ]]; then
+if [[ ! -d "config/package-lists" || ! -d "config/hooks" ]]; then
   echo "❌ Bootstrap non effectué — lance d'abord : sudo bash scripts/00-bootstrap.sh"
   exit 1
 fi
