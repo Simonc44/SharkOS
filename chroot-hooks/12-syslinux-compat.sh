@@ -40,4 +40,20 @@ if [ ! -e /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz ]; then
   tar czf /usr/share/gfxboot-theme-ubuntu/bootlogo.tar.gz --files-from /dev/null
 fi
 
-echo "   ✓ syslinux Debian aligné (isolinux.bin + vesamenu.c32) — gfxboot neutralisé"
+# 4) rsvg → rsvg-convert : à l'étape binaire, lb_binary_syslinux rend le splash
+#    en appelant « rsvg --format png --height 480 --width 640 in.svg out.png »
+#    (sortie en argument POSITIONNEL). Debian bookworm ne fournit QUE
+#    rsvg-convert (sortie via -o). Wrapper de traduction, persistant dans le
+#    chroot pour l'étape binaire.
+cat > /usr/bin/rsvg << 'SHARKEOF'
+#!/bin/bash
+# rsvg (ancienne syntaxe live-build) → rsvg-convert (Debian bookworm)
+if [ "$#" -lt 2 ]; then
+  exec rsvg-convert "$@"
+fi
+OUT="${@: -1}"
+exec rsvg-convert "${@:1:$#-1}" -o "$OUT"
+SHARKEOF
+chmod 0755 /usr/bin/rsvg
+
+echo "   ✓ syslinux Debian aligné (isolinux.bin + vesamenu.c32) — gfxboot neutralisé + rsvg wrapper"

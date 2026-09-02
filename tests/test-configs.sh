@@ -201,6 +201,7 @@ sec_check "$BS"  'linux-packages "linux-image"' "Kernel Debian forcé (sinon lin
 sec_check "$BS"  'initramfs "live-boot"'      "Initramfs Debian live-boot (sinon casper Ubuntu → build échoue)"
 sec_check "$BS"  'initsystem "systemd"'      "Initsystem systemd (sinon live-config-upstart Ubuntu → build échoue)"
 sec_check "$BS"  "12-syslinux-compat.sh"        "Hook 12 : shims syslinux Debian (sinon isolinux.bin absent à l'étape binaire → échec)"
+sec_check "chroot-hooks/12-syslinux-compat.sh" "rsvg-convert" "Hook 12 : wrapper rsvg→rsvg-convert (sinon splash syslinux échoue — Debian n'a que rsvg-convert)"
 sec_check "$BS"  'rm -rf config/hooks'          "Hooks à plat dans config/hooks (sinon glob live-build ne les voit pas → jamais exécutés)"
 sec_check "$BS"  'DEST="config/hooks/'          "Destination hooks : config/hooks/ (pas config/hooks/live/)"
 sec_check "$H50" "shark-extras"              "shark-extras (gros paquets optionnels)"
