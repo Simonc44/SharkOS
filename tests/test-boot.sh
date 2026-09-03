@@ -184,7 +184,7 @@ else
   if [[ -n "${MEDIA:-}" ]]; then
     # ⚠️ ORDRE des console= : ttyS0 doit être le DERNIER paramètre — c'est le
     # dernier console= qui devient /dev/console → les messages systemd
-    # ("[ OK ] Reached target Graphical Interface", "Started Network Manager",
+    # ("[ OK ] Reached target graphical.target", "Started NetworkManager",
     # LightDM…) n'atteignent la série QUE si /dev/console = ttyS0.
     # Avec `console=ttyS0 console=tty0`, /dev/console = tty0 (non capturé) → les
     # greps systemd ci-dessous rataient TOUJOURS, même boot réussi.
@@ -213,7 +213,7 @@ else
     DEADLINE=$(( $(date +%s) + BOOT_TIMEOUT ))
     _TICK=0
     while (( $(date +%s) < DEADLINE )); do
-      grep -q "Reached target Graphical Interface" "$LOG" 2>/dev/null && break
+      grep -q "Reached target graphical.target" "$LOG" 2>/dev/null && break
       kill -0 "$QPID" 2>/dev/null || break
       sleep 5
       _TICK=$((_TICK + 1))
@@ -249,7 +249,11 @@ else
       err "kernel n'a pas démarré (pas de 'Linux version' dans la console)"
     fi
 
-    if grep -q "Reached target Graphical Interface" "$LOG" 2>/dev/null; then
+    # Format réel systemd (bookworm, show_status) :
+    #   "[ OK ] Reached target graphical.target - Graphical Interface."
+    # → chercher "graphical.target" (pas "Graphical Interface" : jamais écrit tel
+    #   quel → v3.0.20 a attendu 480 s et faussement échoué malgré le boot OK).
+    if grep -q "Reached target graphical.target" "$LOG" 2>/dev/null; then
       ok "systemd a atteint la cible graphique (interface prête)"
     else
       err "cible graphique non atteinte — boot live incomplet !"
@@ -267,7 +271,10 @@ else
       warn "session logind pour shark non observée dans la console (l'autologin GTK ne loggue pas toujours sur ttyS0)"
     fi
 
-    if grep -q "Started Network Manager" "$LOG" 2>/dev/null; then
+    # L'unité s'appelle NetworkManager.service (SANS espace) → chercher le nom
+    # d'unité réel, pas "Network Manager" (v3.0.20 : faux négatif alors que
+    # network-online.target était atteint).
+    if grep -q "Started NetworkManager" "$LOG" 2>/dev/null; then
       ok "NetworkManager démarré (pile réseau prête)"
     else
       err "NetworkManager n'a pas démarré — pas de Wi-Fi/ethernet au boot"

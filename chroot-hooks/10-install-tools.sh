@@ -129,7 +129,11 @@ After=multi-user.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/cpupower frequency-set -g schedutil
+# Résilient : en VM/QEMU il n'y a pas de pilote cpufreq → cpupower échoue
+# ([FAILED] sharkos-governor au boot, vu dans le test QEMU v3.0.20). Sortie
+# silencieuse si cpupower absent OU /sys cpufreq inexistant. shark-turbo
+# (hook 60) continue de marcher : il sed-remplace "-g <governor>" ici même.
+ExecStart=/bin/sh -c 'command -v cpupower >/dev/null 2>&1 || exit 0; [ -d /sys/devices/system/cpu/cpu0/cpufreq ] || exit 0; exec cpupower frequency-set -g schedutil'
 RemainAfterExit=yes
 
 [Install]
