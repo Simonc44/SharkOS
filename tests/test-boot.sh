@@ -108,18 +108,21 @@ echo ""
 echo -e "${BLUE}  2. Extraction kernel / initrd / squashfs${NC}"
 KERNEL="$TMP/vmlinuz"; INITRD="$TMP/initrd.img"; SQUASH="$TMP/filesystem.squashfs"
 EXTRACTED=false
+# timeout : l'extraction d'un squashfs de ~1.7 Go DOIT rester bornée — sinon
+# un xorriso/isoinfo bloqué ferait durer le step jusqu'au timeout GitHub.
 if command -v xorriso &>/dev/null; then
-  if xorriso -osirrox on -indev "$ISO" \
+  if timeout 900 xorriso -osirrox on -indev "$ISO" \
        -extract /live/vmlinuz "$KERNEL" \
        -extract /live/initrd.img "$INITRD" \
        -extract /live/filesystem.squashfs "$SQUASH" >/dev/null 2>&1; then
     EXTRACTED=true
   fi
 elif command -v isoinfo &>/dev/null; then
-  isoinfo -J -i "$ISO" -x "/live/vmlinuz" > "$KERNEL" 2>/dev/null && \
-  isoinfo -J -i "$ISO" -x "/live/initrd.img" > "$INITRD" 2>/dev/null && \
-  isoinfo -J -i "$ISO" -x "/live/filesystem.squashfs" > "$SQUASH" 2>/dev/null && \
-  EXTRACTED=true
+  if timeout 300 isoinfo -J -i "$ISO" -x "/live/vmlinuz" > "$KERNEL" 2>/dev/null && \
+     timeout 300 isoinfo -J -i "$ISO" -x "/live/initrd.img" > "$INITRD" 2>/dev/null && \
+     timeout 900 isoinfo -J -i "$ISO" -x "/live/filesystem.squashfs" > "$SQUASH" 2>/dev/null; then
+    EXTRACTED=true
+  fi
 fi
 if [[ "$EXTRACTED" == true ]] && [[ -s "$KERNEL" && -s "$INITRD" && -s "$SQUASH" ]]; then
   ok "kernel + initrd + squashfs extraits ($(du -m "$SQUASH" | cut -f1) Mo)"
@@ -153,8 +156,9 @@ else
   SQSIZE=$(stat -c%s "$SQUASH")
   MBSIZE=$(( (SQSIZE / 1048576) + 300 ))
   PREP_OK=false
-  if dd if=/dev/zero of="$MEDIA" bs=1M count="$MBSIZE" status=none 2>/dev/null \
-     && mkfs.ext4 -F -q -m 0 -O ^has_journal -L sharkos-live "$MEDIA" >/dev/null 2>&1; then
+  echo "     (préparation du média live ${MBSIZE} Mo — max ~3 min)"
+  if timeout 180 dd if=/dev/zero of="$MEDIA" bs=1M count="$MBSIZE" status=none 2>/dev/null \
+     && timeout 120 mkfs.ext4 -F -q -m 0 -O ^has_journal -L sharkos-live "$MEDIA" >/dev/null 2>&1; then
     if [[ "$(id -u)" == 0 ]] && mkdir -p "$TMP/mnt" 2>/dev/null; then
       if mount -o loop "$MEDIA" "$TMP/mnt" >/dev/null 2>&1; then
         mkdir -p "$TMP/mnt/live"
@@ -165,8 +169,8 @@ else
         umount "$TMP/mnt" >/dev/null 2>&1 || true
       fi
     fi
-    if [[ "$PREP_OK" != true ]] && debugfs -w -R "mkdir /live" "$MEDIA" >/dev/null 2>&1 \
-       && debugfs -w -R "write $SQUASH /live/filesystem.squashfs" "$MEDIA" >/dev/null 2>&1; then
+    if [[ "$PREP_OK" != true ]] && timeout 120 debugfs -w -R "mkdir /live" "$MEDIA" >/dev/null 2>&1 \
+       && timeout 600 debugfs -w -R "write $SQUASH /live/filesystem.squashfs" "$MEDIA" >/dev/null 2>&1; then
       PREP_OK=true
     fi
   fi
@@ -201,13 +205,33 @@ else
 
     BOOT_TIMEOUT=480
     DEADLINE=$(( $(date +%s) + BOOT_TIMEOUT ))
+    _TICK=0
     while (( $(date +%s) < DEADLINE )); do
       grep -q "Reached target Graphical Interface" "$LOG" 2>/dev/null && break
       kill -0 "$QPID" 2>/dev/null || break
       sleep 5
+      _TICK=$((_TICK + 1))
+      if (( _TICK % 12 == 0 )); then
+        _ELAPSED=$(( BOOT_TIMEOUT - (DEADLINE - $(date +%s)) ))
+        echo "     (boot en cours — ${_ELAPSED} s / ${BOOT_TIMEOUT} s max)"
+      fi
     done
     sleep 5   # laisser systemd-logind enregistrer la session
-    kill "$QPID" 2>/dev/null; wait "$QPID" 2>/dev/null
+    # ── Arrêt QEMU TOUJOURS BORNÉ ─────────────────────────────────────
+    # SIGTERM déclenche un shutdown ACPI du GUEST ; avec le bureau X + LightDM
+    # présent, ce shutdown peut HANGER indéfiniment → QEMU ne sort jamais → un
+    # `wait` nu bloquerait le step ~78 min jusqu'au timeout GitHub (run
+    # v3.0.18). Escalade : SIGTERM → 15 s de grâce → SIGKILL, wait borné.
+    kill "$QPID" 2>/dev/null || true
+    for _ in $(seq 1 15); do
+      kill -0 "$QPID" 2>/dev/null || break
+      sleep 1
+    done
+    if kill -0 "$QPID" 2>/dev/null; then
+      echo "     (QEMU ne répond pas au shutdown — SIGKILL)"
+      kill -9 "$QPID" 2>/dev/null || true
+    fi
+    wait "$QPID" 2>/dev/null || true
 
     # ── Jalons du boot ──
     [[ -s "$LOG" ]] && ok "log console capturé ($(wc -l < "$LOG") lignes)" \
@@ -264,7 +288,8 @@ elif ! command -v unsquashfs &>/dev/null; then
   warn "SKIP — unsquashfs absent (apt install squashfs-tools)"
   SKIPPED_CHECKS=$((SKIPPED_CHECKS + 16))
 else
-  if unsquashfs -q -d "$ROOTFS" "$SQUASH" >/dev/null 2>&1; then
+  echo "     (décompression du squashfs ~1.7 Go — max 15 min)"
+  if timeout 900 unsquashfs -q -d "$ROOTFS" "$SQUASH" >/dev/null 2>&1; then
     ok "squashfs décompressé (contenu réel de l'ISO)"
 
     # ── 4a. Installateur : Calamares bundle + sharkos-installer + wizard ──

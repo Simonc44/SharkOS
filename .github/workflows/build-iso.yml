@@ -97,6 +97,10 @@ jobs:
           sudo bash tests/test-boot.sh iso-build/SharkOS-Dragon-Edition.iso
 
       - name: 📤 Upload artifact
+        # if: always() — un échec/hang du test QEMU ne doit JAMAIS faire perdre
+        # l'ISO : elle est uploadée même si le step précédent a échoué (le test
+        # reste le garde-fou de la Release, qui n'est créée qu'en cas de succès).
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: SharkOS-Dragon-Edition-iso
