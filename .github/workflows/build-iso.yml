@@ -90,6 +90,11 @@ jobs:
           echo "✅ ISO : $ISO ($ISO_SIZE)"
 
       - name: 🖥️ Test SYSTÈME RÉEL (boot QEMU + Calamares + Wi-Fi + contenu)
+        # Décision utilisateur : test ADVISORY — il s'exécute et signale les
+        # problèmes réels de l'ISO, mais ne doit JAMAIS bloquer la Release
+        # (v3.0.20 : test terminé en 11 min avec un FAIL propre, Release
+        # sautée). Le gate de diffusion = build + vérification ISO.
+        continue-on-error: true
         run: |
           set -euo pipefail
           sudo apt-get install -y --no-install-recommends \
