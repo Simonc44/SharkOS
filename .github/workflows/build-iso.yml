@@ -94,7 +94,10 @@ jobs:
           set -euo pipefail
           sudo apt-get install -y --no-install-recommends \
             qemu-system-x86 e2fsprogs
-          sudo bash tests/test-boot.sh iso-build/SharkOS-Dragon-Edition.iso
+          # timeout -k : filet de sécurité GLOBAL — même si test-boot.sh se
+          # bloquait sur un cas imprévu, le step se termine seul (25 min max)
+          # au lieu d'atteindre le timeout workflow de 90 min (run v3.0.18/19).
+          timeout -k 60 1500 sudo bash tests/test-boot.sh iso-build/SharkOS-Dragon-Edition.iso
 
       - name: 📤 Upload artifact
         # if: always() — un échec/hang du test QEMU ne doit JAMAIS faire perdre

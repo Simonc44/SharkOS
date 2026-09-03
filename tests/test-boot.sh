@@ -111,16 +111,16 @@ EXTRACTED=false
 # timeout : l'extraction d'un squashfs de ~1.7 Go DOIT rester bornée — sinon
 # un xorriso/isoinfo bloqué ferait durer le step jusqu'au timeout GitHub.
 if command -v xorriso &>/dev/null; then
-  if timeout 900 xorriso -osirrox on -indev "$ISO" \
+  if timeout -k 30 900 xorriso -osirrox on -indev "$ISO" \
        -extract /live/vmlinuz "$KERNEL" \
        -extract /live/initrd.img "$INITRD" \
        -extract /live/filesystem.squashfs "$SQUASH" >/dev/null 2>&1; then
     EXTRACTED=true
   fi
 elif command -v isoinfo &>/dev/null; then
-  if timeout 300 isoinfo -J -i "$ISO" -x "/live/vmlinuz" > "$KERNEL" 2>/dev/null && \
-     timeout 300 isoinfo -J -i "$ISO" -x "/live/initrd.img" > "$INITRD" 2>/dev/null && \
-     timeout 900 isoinfo -J -i "$ISO" -x "/live/filesystem.squashfs" > "$SQUASH" 2>/dev/null; then
+  if timeout -k 30 300 isoinfo -J -i "$ISO" -x "/live/vmlinuz" > "$KERNEL" 2>/dev/null && \
+     timeout -k 30 300 isoinfo -J -i "$ISO" -x "/live/initrd.img" > "$INITRD" 2>/dev/null && \
+     timeout -k 30 900 isoinfo -J -i "$ISO" -x "/live/filesystem.squashfs" > "$SQUASH" 2>/dev/null; then
     EXTRACTED=true
   fi
 fi
@@ -157,8 +157,8 @@ else
   MBSIZE=$(( (SQSIZE / 1048576) + 300 ))
   PREP_OK=false
   echo "     (préparation du média live ${MBSIZE} Mo — max ~3 min)"
-  if timeout 180 dd if=/dev/zero of="$MEDIA" bs=1M count="$MBSIZE" status=none 2>/dev/null \
-     && timeout 120 mkfs.ext4 -F -q -m 0 -O ^has_journal -L sharkos-live "$MEDIA" >/dev/null 2>&1; then
+  if timeout -k 30 180 dd if=/dev/zero of="$MEDIA" bs=1M count="$MBSIZE" status=none 2>/dev/null \
+     && timeout -k 30 120 mkfs.ext4 -F -q -m 0 -O ^has_journal -L sharkos-live "$MEDIA" >/dev/null 2>&1; then
     if [[ "$(id -u)" == 0 ]] && mkdir -p "$TMP/mnt" 2>/dev/null; then
       if mount -o loop "$MEDIA" "$TMP/mnt" >/dev/null 2>&1; then
         mkdir -p "$TMP/mnt/live"
@@ -169,8 +169,8 @@ else
         umount "$TMP/mnt" >/dev/null 2>&1 || true
       fi
     fi
-    if [[ "$PREP_OK" != true ]] && timeout 120 debugfs -w -R "mkdir /live" "$MEDIA" >/dev/null 2>&1 \
-       && timeout 600 debugfs -w -R "write $SQUASH /live/filesystem.squashfs" "$MEDIA" >/dev/null 2>&1; then
+    if [[ "$PREP_OK" != true ]] && timeout -k 30 120 debugfs -w -R "mkdir /live" "$MEDIA" >/dev/null 2>&1 \
+       && timeout -k 30 600 debugfs -w -R "write $SQUASH /live/filesystem.squashfs" "$MEDIA" >/dev/null 2>&1; then
       PREP_OK=true
     fi
   fi
@@ -182,6 +182,19 @@ else
   fi
 
   if [[ -n "${MEDIA:-}" ]]; then
+    # ⚠️ ORDRE des console= : ttyS0 doit être le DERNIER paramètre — c'est le
+    # dernier console= qui devient /dev/console → les messages systemd
+    # ("[ OK ] Reached target Graphical Interface", "Started Network Manager",
+    # LightDM…) n'atteignent la série QUE si /dev/console = ttyS0.
+    # Avec `console=ttyS0 console=tty0`, /dev/console = tty0 (non capturé) → les
+    # greps systemd ci-dessous rataient TOUJOURS, même boot réussi.
+    # systemd.show_status=1 force l'affichage du statut sur la console.
+    #
+    # ⚠️⚠️ JAMAIS de commentaire entre les lignes `\` de la commande ci-dessous :
+    # un `#` en début de mot au milieu avale TOUTE la fin de la commande
+    # (`-append`, `-drive`, `-netdev` ET le `&` final) — QEMU partait alors en
+    # FOREGROUND, sans paramètres de boot, sans disque média → le script se
+    # bloquait indéfiniment sur cette ligne (hang v3.0.18 78 min / v3.0.19).
     LOG="$TMP/boot.log"
     KVM=""
     [[ -e /dev/kvm ]] && KVM="-enable-kvm -cpu host"
@@ -189,13 +202,6 @@ else
       -display none -serial file:"$LOG" \
       -no-reboot \
       -kernel "$KERNEL" -initrd "$INITRD" \
-      # ⚠️ ORDRE des console= : ttyS0 doit être le DERNIER paramètre — c'est le
-      # dernier console= qui devient /dev/console → les messages systemd
-      # ("[ OK ] Reached target Graphical Interface", "Started Network
-      # Manager", LightDM…) n'atteignent la série QUE si /dev/console = ttyS0.
-      # Avec `console=ttyS0 console=tty0`, /dev/console = tty0 (non capturé)
-      # → les greps systemd ci-dessous rataient TOUJOURS, même boot réussi.
-      # systemd.show_status=1 force l'affichage du statut sur la console.
       -append "boot=live components console=tty0 console=ttyS0 systemd.show_status=1 live-media=/dev/sda mitigations=on audit=1 page_poison=1 slab_nomerge" \
       -drive file="$MEDIA",format=raw,if=ide \
       -netdev user,id=n0 -device e1000,netdev=n0 \
@@ -289,7 +295,7 @@ elif ! command -v unsquashfs &>/dev/null; then
   SKIPPED_CHECKS=$((SKIPPED_CHECKS + 16))
 else
   echo "     (décompression du squashfs ~1.7 Go — max 15 min)"
-  if timeout 900 unsquashfs -q -d "$ROOTFS" "$SQUASH" >/dev/null 2>&1; then
+  if timeout -k 30 900 unsquashfs -q -d "$ROOTFS" "$SQUASH" >/dev/null 2>&1; then
     ok "squashfs décompressé (contenu réel de l'ISO)"
 
     # ── 4a. Installateur : Calamares bundle + sharkos-installer + wizard ──
