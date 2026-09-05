@@ -63,10 +63,21 @@ echo "[3/6] Config live-build Garuda-style..."
 # bonne suite sécurité "<distro>-security" — le mode debian génère l'ancien
 # "<distro>/updates" qui 404 sur security.debian.org depuis bookworm !
 # En revanche on PIN explicitement tout ce que le mode ubuntu défaut mal :
+#   • bootloader : --bootloader grub2 — le boot isolinux de l'ISO échouait avec
+#     « Failed to load ldlinux.c32 » (SYSLINUX 6.04) selon le matériel et la
+#     méthode de flash (Ventoy, Rufus ISO mode, contrôleurs USB) — problème
+#     classique d'isolinux. GRUB2 lit l'ISO9660 nativement (image El Torito
+#     grub_eltorito construite par lb_binary_iso via grub-mkimage DANS le
+#     chroot → grub-pc requis en paquet) + isohybrid conservé → compatible
+#     Ventoy/dd/Rufus-DD/VM.
 #   • thème syslinux : --syslinux-theme live-build (sinon syslinux-themes-
 #     ubuntu-oneiric + gfxboot-theme-ubuntu, inexistants dans Debian ; le thème
 #     "live-build" est rendu depuis les templates via librsvg2-bin du chroot)
 #   • kernel/initramfs/initsystem/firmware : épinglés plus bas.
+# NB : AUCUN commentaire à l'intérieur de la continuation backslash ci-dessous
+# — un `#` en début de mot au milieu d'une commande continuée avale la fin de
+# la commande (bug v3.0.18, hang QEMU ; ici `--bootloader` deviendrait une
+# commande orpheline → « command not found »).
 lb config \
   --architectures amd64 \
   --distribution bookworm \
@@ -82,13 +93,6 @@ lb config \
   --mirror-chroot-security   http://security.debian.org/debian-security \
   --mirror-binary-security   http://security.debian.org/debian-security \
   --keyring-packages debian-archive-keyring \
-  # BOOTLOADER : grub2 au lieu de syslinux/isolinux. Le boot isolinux de l'ISO
-  # échouait avec « Failed to load ldlinux.c32 » (SYSLINUX 6.04) selon le
-  # matériel/méthode de flash (Ventoy, Rufus ISO mode, contrôleurs USB) —
-  # problème classique d'isolinux, PAS d'un fichier manquant de notre ISO.
-  # GRUB2 lit l'ISO9660 nativement (image El Torito grub_eltorito construite
-  # par lb_binary_iso via grub-mkimage DANS le chroot → grub-pc requis en
-  # paquet) + isohybrid conservé → compatible Ventoy/dd/Rufus-DD/VM.
   --bootloader grub2 \
   --syslinux-theme "live-build" \
   --linux-packages "linux-image" \
