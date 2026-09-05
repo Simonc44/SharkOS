@@ -200,6 +200,8 @@ sec_check "$BS"  'syslinux-theme "live-build"' "Thème syslinux Debian intégré
 sec_check "$BS"  'linux-packages "linux-image"' "Kernel Debian forcé (sinon linux-generic Ubuntu → build échoue)"
 sec_check "$BS"  'initramfs "live-boot"'      "Initramfs Debian live-boot (sinon casper Ubuntu → build échoue)"
 sec_check "$BS"  'initsystem "systemd"'      "Initsystem systemd (sinon live-config-upstart Ubuntu → build échoue)"
+sec_check "$BS"  'bootloader grub2'          "Boot : GRUB2 BIOS (remplace isolinux — sinon échec boot « Failed to load ldlinux.c32 » selon matériel/Ventoy/Rufus ISO mode)"
+sec_check "$BS"  '^grub-pc$'                 "Boot : grub-pc dans la liste de paquets (grub_eltorito construit par lb_binary_iso dans le chroot → sinon ISO sans image El Torito, non bootable)"
 sec_check "$BS"  "12-syslinux-compat.sh"        "Hook 12 : shims syslinux Debian (sinon isolinux.bin absent à l'étape binaire → échec)"
 sec_check "chroot-hooks/12-syslinux-compat.sh" "rsvg-convert" "Hook 12 : wrapper rsvg→rsvg-convert (sinon splash syslinux échoue — Debian n'a que rsvg-convert)"
 sec_check "chroot-hooks/12-syslinux-compat.sh" "syslinux-utils" "Hook 12 : syslinux-utils dans le chroot (isohybrid requis par binary.sh à l'étape binaire → sinon 'isohybrid: not found')"

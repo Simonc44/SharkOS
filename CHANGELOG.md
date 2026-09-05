@@ -9,6 +9,34 @@ Format basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
 ---
 
+## [v3.0.23] — 2026-09-05 — Boot GRUB2 (fix « Failed to load ldlinux.c32 »)
+
+**Cause** : l'ISO bootait via **isolinux (SYSLINUX)** — chargeur BIOS réputé fragile
+selon le matériel et la méthode de flash. Sur certains PC / Ventoy / Rufus en mode
+ISO, isolinux ne trouve pas son module et affiche :
+`SYSLINUX 6.04 … Failed to load ldlinux.c32 — Boot failed`.
+Le test QEMU de la CI ne l'a jamais vu : il boote kernel+initrd **directement**,
+en contournant le bootloader.
+
+### Corrigé
+- **`lb config --bootloader grub2`** : l'ISO boote désormais via **GRUB2 (El Torito,
+  BIOS)** — GRUB lit l'ISO9660 nativement, sans module externe à charger. Compatible
+  Ventoy (mode normal), dd, Rufus (mode DD), balenaEtcher, machines BIOS et VM.
+  L'hybrid MBR (`isohybrid`) est conservé → flashable en dd sur USB.
+- **`grub-pc`** ajouté à la liste de paquets : `lb_binary_iso` construit l'image de
+  boot `boot/grub/grub_eltorito` (cdboot.img + core.img `grub-mkimage`) DANS le
+  chroot — sans grub-pc, aucune image El Torito → ISO non bootable.
+- **Gate CI** : le step « Vérifier ISO + checksum » (non-advisory) vérifie maintenant
+  la **structure de boot** (`/boot/grub/grub.cfg` + kernel/initrd/squashfs présents)
+  → une régression de bootloader ne peut plus passer inaperçue.
+
+### Limite connue
+- live-build 3.0~a57 (runner Ubuntu 22.04) ne gère **pas l'UEFI** (support ajouté
+  dans les versions live-build postérieures) : l'ISO reste BIOS-only. Piste future :
+  migrer vers une version de live-build ≥ 2020 pour `grub-efi` + Secure Boot.
+
+---
+
 ## [v3.0.22] — 2026-09-02 — ✅ Premier pipeline 100 % VERT
 
 **Premier run où TOUTES les étapes passent**, y compris le **test système réel** :
@@ -151,6 +179,7 @@ LightDM + NetworkManager, puis la Release est créée avec l'ISO (~1,7 Go).
 ---
 
 <!-- Liens de comparaison (à compléter au fil des releases) -->
+[v3.0.23]: https://github.com/Simonc44/SharkOS/releases/tag/v3.0.23
 [v3.0.22]: https://github.com/Simonc44/SharkOS/releases/tag/v3.0.22
 [v3.0.21]: https://github.com/Simonc44/SharkOS/releases/tag/v3.0.21
 [v3.0.20]: https://github.com/Simonc44/SharkOS/releases/tag/v3.0.20

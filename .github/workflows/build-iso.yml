@@ -87,7 +87,25 @@ jobs:
           sha256sum "$ISO"
           echo "✅ .sha256 présent (généré par le build) :"
           cat "$ISO.sha256"
-          echo "✅ ISO : $ISO ($ISO_SIZE)"
+          echo "🔍 Structure de boot (gate : l'ISO doit être bootable BIOS) :"
+          # isoinfo vient de genisoimage (installé au step outils). Vérifie que
+          # le bootloader GRUB2 est réellement sur l'ISO — aurait attrapé
+          # l'échec « Failed to load ldlinux.c32 » (isolinux) au lieu du test
+          # QEMU advisory qui contourne le bootloader (boot kernel direct).
+          if command -v isoinfo &>/dev/null; then
+            LISTING=$(isoinfo -J -i "$ISO" -f 2>/dev/null || true)
+          else
+            LISTING=$(xorriso -indev "$ISO" -find / -type f 2>/dev/null || true)
+          fi
+          for P in "/live/vmlinuz" "/live/initrd.img" "/live/filesystem.squashfs" "/boot/grub/grub.cfg"; do
+            if echo "$LISTING" | grep -q "^$P$"; then
+              echo "   ✅ $P présent"
+            else
+              echo "   ❌ $P ABSENT — ISO non bootable !"
+              exit 1
+            fi
+          done
+          echo "✅ ISO : $ISO ($ISO_SIZE) — structure de boot GRUB2 OK"
 
       - name: 🖥️ Test SYSTÈME RÉEL (boot QEMU + Calamares + Wi-Fi + contenu)
         # Décision utilisateur : test ADVISORY — il s'exécute et signale les

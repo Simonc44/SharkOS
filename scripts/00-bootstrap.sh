@@ -82,6 +82,14 @@ lb config \
   --mirror-chroot-security   http://security.debian.org/debian-security \
   --mirror-binary-security   http://security.debian.org/debian-security \
   --keyring-packages debian-archive-keyring \
+  # BOOTLOADER : grub2 au lieu de syslinux/isolinux. Le boot isolinux de l'ISO
+  # échouait avec « Failed to load ldlinux.c32 » (SYSLINUX 6.04) selon le
+  # matériel/méthode de flash (Ventoy, Rufus ISO mode, contrôleurs USB) —
+  # problème classique d'isolinux, PAS d'un fichier manquant de notre ISO.
+  # GRUB2 lit l'ISO9660 nativement (image El Torito grub_eltorito construite
+  # par lb_binary_iso via grub-mkimage DANS le chroot → grub-pc requis en
+  # paquet) + isohybrid conservé → compatible Ventoy/dd/Rufus-DD/VM.
+  --bootloader grub2 \
   --syslinux-theme "live-build" \
   --linux-packages "linux-image" \
   --linux-flavours "amd64" \
@@ -129,6 +137,14 @@ pavucontrol
 # ── Sudo (--apt-recommends false → pas de sudo sans liste explicite) ──
 # Requis par le hook 50 (user shark + sudo NOPASSWD) et les commandes shark-*
 sudo
+
+# ── Bootloader GRUB2 (BIOS) ────────────────────────────────────────
+# grub-pc : REQUIS à l'étape BINAIRE — avec --bootloader grub2, lb_binary_iso
+# génère l'image El Torito « boot/grub/grub_eltorito » (cdboot.img + core.img
+# grub-mkimage) DANS le chroot (binary.sh). Sans grub-pc → aucune image de
+# boot BIOS → ISO non bootable. Remplace isolinux (échec « Failed to load
+# ldlinux.c32 » selon matériel/méthode) : GRUB lit l'ISO9660 directement.
+grub-pc
 
 # ── Polices ────────────────────────────────────────────────────────
 # NB : pas de ttf-mscorefonts-installer — son postinst télécharge depuis
